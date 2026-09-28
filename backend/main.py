@@ -20,16 +20,7 @@ from schemas import (
 )
 
 # --- Database setup ---
-# A file-based SQLite database. The path can be overridden for tests.
-#
-# IMPORTANT: we build the path from THIS FILE's folder, not from the folder
-# you happen to run the command in. Without this, starting the app from the
-# project root and starting it from inside backend/ would use two different
-# database files, and your tasks would look like they vanished.
-BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DB_PATH = os.path.join(BACKEND_DIR, "todos.db")
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH}")
-
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./todos.db")
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -39,13 +30,10 @@ Base.metadata.create_all(bind=engine)
 # --- FastAPI app ---
 app = FastAPI(title="Todo & Notes API", version="1.0.0")
 
-# Allow the Vite dev server to call the API during development.
-# We use a regex so it still works if you change the Vite port.
-# (In production the frontend is served from this same server,
-#  so CORS is not involved at all.)
+# Allow CORS so the Vite dev server can call the API during development
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,12 +65,13 @@ def health_check():
 
 @app.get("/api/tasks", response_model=list[TaskResponse])
 def get_tasks(
+    user_id: str = Query(..., description="Unique browser ID of the user"),
     filter: str = Query("all", description="Filter: all, active, completed, overdue"),
     search: Optional[str] = Query(None, description="Search tasks by text"),
     db: Session = Depends(get_db),
 ):
-    """Get all tasks, optionally filtered and/or searched."""
-    query = db.query(Task)
+    """Get all tasks for a specific user, optionally filtered and/or searched."""
+    query = db.query(Task).filter(Task.user_id == user_id)
 
     # Apply text search (case-insensitive)
     if search:
@@ -100,19 +89,17 @@ def get_tasks(
             Task.due_date.isnot(None),
             Task.due_date < today,
         )
-    # "all" needs no extra filter
 
-    # Order by position so the list stays in the user's chosen order
     return query.order_by(Task.position).all()
 
 
 @app.post("/api/tasks", response_model=TaskResponse, status_code=201)
 def create_task(task: TaskCreate, db: Session = Depends(get_db)):
-    """Create a new task. Position is set to the end of the list."""
-    # Find the highest current position so the new task goes to the bottom
-    max_pos = db.query(func.max(Task.position)).scalar() or 0
+    """Create a new task for a specific user."""
+    max_pos = db.query(func.max(Task.position)).filter(Task.user_id == task.user_id).scalar() or 0
 
     db_task = Task(
+        user_id=task.user_id,
         title=task.title,
         due_date=task.due_date,
         position=max_pos + 1,
@@ -125,16 +112,15 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
 
 @app.post("/api/tasks/bulk", response_model=list[TaskResponse], status_code=201)
 def create_tasks_bulk(bulk: BulkCreate, db: Session = Depends(get_db)):
-    """Create many tasks at once (one per line pasted by the user)."""
-    max_pos = db.query(func.max(Task.position)).scalar() or 0
+    """Create many tasks at once for a specific user."""
+    max_pos = db.query(func.max(Task.position)).filter(Task.user_id == bulk.user_id).scalar() or 0
     new_tasks = []
 
     for i, title in enumerate(bulk.titles):
-        # Skip empty lines
         stripped = title.strip()
         if not stripped:
             continue
-        db_task = Task(title=stripped, position=max_pos + i + 1)
+        db_task = Task(user_id=bulk.user_id, title=stripped, position=max_pos + i + 1)
         db.add(db_task)
         new_tasks.append(db_task)
 
@@ -144,6 +130,13 @@ def create_tasks_bulk(bulk: BulkCreate, db: Session = Depends(get_db)):
     return new_tasks
 
 
+@app.delete("/api/tasks/completed", status_code=204)
+def clear_completed(user_id: str = Query(..., description="Unique browser ID of the user"), db: Session = Depends(get_db)):
+    """Delete all completed tasks for a specific user."""
+    db.query(Task).filter(Task.user_id == user_id, Task.completed == True).delete()
+    db.commit()
+
+
 @app.put("/api/tasks/{task_id}", response_model=TaskResponse)
 def update_task(task_id: int, task_update: TaskUpdate, db: Session = Depends(get_db)):
     """Update a task's title, completed status, or due date."""
@@ -151,7 +144,6 @@ def update_task(task_id: int, task_update: TaskUpdate, db: Session = Depends(get
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Only update fields that were provided
     if task_update.title is not None:
         db_task.title = task_update.title
     if task_update.completed is not None:
@@ -162,13 +154,6 @@ def update_task(task_id: int, task_update: TaskUpdate, db: Session = Depends(get
     db.commit()
     db.refresh(db_task)
     return db_task
-
-
-@app.delete("/api/tasks/completed", status_code=204)
-def clear_completed(db: Session = Depends(get_db)):
-    """Delete all completed tasks at once."""
-    db.query(Task).filter(Task.completed == True).delete()
-    db.commit()
 
 
 @app.delete("/api/tasks/{task_id}", status_code=204)
@@ -192,24 +177,23 @@ def move_task(task_id: int, direction: str = Query(..., description="up or down"
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Find the neighbour task in the direction we want to move
+    # Find the neighbour task in the direction we want to move (same user only)
     if direction == "up":
         neighbour = (
             db.query(Task)
-            .filter(Task.position < db_task.position)
+            .filter(Task.user_id == db_task.user_id, Task.position < db_task.position)
             .order_by(Task.position.desc())
             .first()
         )
     else:
         neighbour = (
             db.query(Task)
-            .filter(Task.position > db_task.position)
+            .filter(Task.user_id == db_task.user_id, Task.position > db_task.position)
             .order_by(Task.position.asc())
             .first()
         )
 
     if neighbour:
-        # Swap positions
         db_task.position, neighbour.position = neighbour.position, db_task.position
         db.commit()
         db.refresh(db_task)
@@ -223,11 +207,12 @@ def move_task(task_id: int, direction: str = Query(..., description="up or down"
 
 @app.get("/api/notes", response_model=list[NoteResponse])
 def get_notes(
+    user_id: str = Query(..., description="Unique browser ID of the user"),
     search: Optional[str] = Query(None, description="Search notes by title or content"),
     db: Session = Depends(get_db),
 ):
-    """Get all notes, optionally searched by title or content."""
-    query = db.query(Note)
+    """Get all notes for a specific user, optionally searched."""
+    query = db.query(Note).filter(Note.user_id == user_id)
 
     if search:
         query = query.filter(
@@ -239,8 +224,8 @@ def get_notes(
 
 @app.post("/api/notes", response_model=NoteResponse, status_code=201)
 def create_note(note: NoteCreate, db: Session = Depends(get_db)):
-    """Create a new note."""
-    db_note = Note(title=note.title, content=note.content)
+    """Create a new note for a specific user."""
+    db_note = Note(user_id=note.user_id, title=note.title, content=note.content)
     db.add(db_note)
     db.commit()
     db.refresh(db_note)
@@ -288,57 +273,15 @@ def delete_note(note_id: int, db: Session = Depends(get_db)):
 # ========================
 #  Serve React build (production)
 # ========================
-# When the frontend has been built (frontend/dist exists), serve it here.
-# This makes the app work as ONE service on platforms like Render.
-FRONTEND_DIST = os.path.join(BACKEND_DIR, "..", "frontend", "dist")
-
-# Return 404 for any unknown /api/ route (before the React catch-all)
-@app.api_route("/api/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-def api_not_found(full_path: str):
-    """Catch-all for unknown API routes — returns proper 404 JSON."""
-    raise HTTPException(status_code=404, detail="API endpoint not found")
-
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 
 if os.path.isdir(FRONTEND_DIST):
-    # Serve static files (JS, CSS, images) from the build folder
-    ASSETS_DIR = os.path.join(FRONTEND_DIST, "assets")
-    if os.path.isdir(ASSETS_DIR):
-        app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
 
-    # The real folder path, used to check that files stay inside it
-    DIST_ROOT = os.path.realpath(FRONTEND_DIST)
-
-    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
+    @app.get("/{full_path:path}")
     def serve_react(full_path: str):
-        """
-        Serve the React app for any non-API route.
-        This makes client-side routing work on refresh/deep links.
-        """
-        # If the requested path is a real file (like favicon), serve it
-        file_path = os.path.realpath(os.path.join(DIST_ROOT, full_path))
-
-        # SAFETY: make sure the file is really inside the dist folder.
-        # Without this check, a URL like /../../backend/todos.db would
-        # let anyone download your source code and your database!
-        if file_path.startswith(DIST_ROOT + os.sep) and os.path.isfile(file_path):
+        """Serve the React app for any non-API route."""
+        file_path = os.path.join(FRONTEND_DIST, full_path)
+        if os.path.isfile(file_path):
             return FileResponse(file_path)
-
-        # Otherwise serve index.html and let React handle the route.
-        # We tell browsers not to cache it, so that after a redeploy
-        # people get the NEW app instead of a stale cached copy.
-        response = FileResponse(os.path.join(DIST_ROOT, "index.html"))
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        return response
-
-
-# ========================
-#  Start the server
-# ========================
-# Render (and most hosts) tell the app which port to use through the
-# PORT environment variable. Locally there is no PORT, so we use 8000.
-if __name__ == "__main__":
-    import uvicorn
-
-    port = int(os.getenv("PORT", 8000))  # PORT comes from Render
-    print(f"Starting server on port {port}...")
-    uvicorn.run(app, host="0.0.0.0", port=port)
+        return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))

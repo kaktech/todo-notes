@@ -2,8 +2,23 @@
  * TasksPage: the main todo list page.
  * Features: add, complete, edit, delete, reorder, filter, search,
  * bulk add, due dates, progress bar, clear completed.
+ * Each user has a unique ID stored in localStorage so tasks are separate.
  */
 import { useState, useEffect, useCallback } from 'react'
+
+// Generate a unique user ID and store it in localStorage
+// This means each browser/device gets its own separate task list
+function getUserId() {
+  let id = localStorage.getItem('user_id')
+  if (!id) {
+    // Create a random ID like "user-a1b2c3d4"
+    id = 'user-' + Math.random().toString(36).substring(2, 10)
+    localStorage.setItem('user_id', id)
+  }
+  return id
+}
+
+const USER_ID = getUserId()
 
 // Helper: format a date string as "YYYY-MM-DD" for comparison
 function todayStr() {
@@ -16,7 +31,6 @@ function getDueBadge(dueDate) {
   const today = todayStr()
   if (dueDate < today) return { label: 'Overdue', className: 'badge overdue' }
   if (dueDate === today) return { label: 'Due today', className: 'badge today' }
-  // Calculate days difference
   const diff = Math.ceil((new Date(dueDate) - new Date(today)) / (1000 * 60 * 60 * 24))
   return { label: `Due in ${diff} day${diff === 1 ? '' : 's'}`, className: 'badge upcoming' }
 }
@@ -26,32 +40,31 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState([])
   const [newTask, setNewTask] = useState('')
   const [newDueDate, setNewDueDate] = useState('')
-  const [filter, setFilter] = useState('all') // all, active, completed, overdue
+  const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [editingId, setEditingId] = useState(null) // which task is being edited
+  const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
-  const [showBulk, setShowBulk] = useState(false) // show bulk add textarea
+  const [showBulk, setShowBulk] = useState(false)
   const [bulkText, setBulkText] = useState('')
-  const [sortByDue, setSortByDue] = useState(false) // toggle sort by due date
+  const [sortByDue, setSortByDue] = useState(false)
 
-  // --- Fetch tasks from the API ---
+  // --- Fetch tasks from the API (only for this user) ---
   const fetchTasks = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      let url = '/api/tasks'
+      let url = `/api/tasks?user_id=${USER_ID}`
       const params = new URLSearchParams()
       if (filter !== 'all') params.set('filter', filter)
       if (search) params.set('search', search)
-      if (params.toString()) url += '?' + params.toString()
+      if (params.toString()) url += '&' + params.toString()
 
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to load tasks')
       let data = await res.json()
 
-      // Optional: sort by due date (tasks without due date go last)
       if (sortByDue) {
         data = [...data].sort((a, b) => {
           if (!a.due_date && !b.due_date) return 0
@@ -62,14 +75,13 @@ export default function TasksPage() {
       }
 
       setTasks(data)
-    } catch {
+    } catch (err) {
       setError('Could not load tasks. Is the server running?')
     } finally {
       setLoading(false)
     }
   }, [filter, search, sortByDue])
 
-  // Re-fetch whenever filter, search, or sort changes
   useEffect(() => {
     fetchTasks()
   }, [fetchTasks])
@@ -82,7 +94,7 @@ export default function TasksPage() {
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, due_date: newDueDate || null }),
+        body: JSON.stringify({ user_id: USER_ID, title, due_date: newDueDate || null }),
       })
       if (!res.ok) throw new Error('Failed to add task')
       setNewTask('')
@@ -93,7 +105,7 @@ export default function TasksPage() {
     }
   }
 
-  // --- Bulk add: each line becomes a task ---
+  // --- Bulk add ---
   async function addBulk() {
     const titles = bulkText.split('\n')
     if (titles.every(t => !t.trim())) return
@@ -101,7 +113,7 @@ export default function TasksPage() {
       const res = await fetch('/api/tasks/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titles }),
+        body: JSON.stringify({ user_id: USER_ID, titles }),
       })
       if (!res.ok) throw new Error('Failed to bulk add')
       setBulkText('')
@@ -126,13 +138,13 @@ export default function TasksPage() {
     }
   }
 
-  // --- Start editing a task ---
+  // --- Start editing ---
   function startEdit(task) {
     setEditingId(task.id)
     setEditText(task.title)
   }
 
-  // --- Save edited task text ---
+  // --- Save edited task ---
   async function saveEdit(id) {
     const title = editText.trim()
     if (!title) return
@@ -172,14 +184,14 @@ export default function TasksPage() {
   // --- Clear all completed tasks ---
   async function clearCompleted() {
     try {
-      await fetch('/api/tasks/completed', { method: 'DELETE' })
+      await fetch(`/api/tasks/completed?user_id=${USER_ID}`, { method: 'DELETE' })
       fetchTasks()
     } catch {
       setError('Failed to clear completed')
     }
   }
 
-  // --- Compute progress stats ---
+  // --- Compute progress ---
   const totalTasks = tasks.length
   const completedTasks = tasks.filter(t => t.completed).length
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
@@ -187,9 +199,8 @@ export default function TasksPage() {
   // --- Render ---
   return (
     <div className="tasks-page">
-      <h1>Tasks</h1>
+      <h1>My Tasks</h1>
 
-      {/* Error message */}
       {error && <div className="error-banner">{error}</div>}
 
       {/* Add task form */}
@@ -215,7 +226,7 @@ export default function TasksPage() {
         </button>
       </div>
 
-      {/* Bulk add textarea */}
+      {/* Bulk add */}
       {showBulk && (
         <div className="bulk-add">
           <textarea
@@ -229,7 +240,7 @@ export default function TasksPage() {
         </div>
       )}
 
-      {/* Search and filter controls */}
+      {/* Search and sort */}
       <div className="controls-row">
         <input
           type="text"
@@ -261,7 +272,7 @@ export default function TasksPage() {
         ))}
       </div>
 
-      {/* Progress bar and counter */}
+      {/* Progress */}
       <div className="progress-section">
         <span className="progress-text">
           {completedTasks} of {totalTasks} tasks completed
@@ -271,17 +282,14 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Clear completed button */}
       {completedTasks > 0 && (
         <button onClick={clearCompleted} className="btn btn-danger btn-small">
           Clear completed
         </button>
       )}
 
-      {/* Loading state */}
       {loading && <div className="loading">Loading tasks...</div>}
 
-      {/* Task list */}
       {!loading && tasks.length === 0 && (
         <div className="empty-state">
           {search ? 'No tasks match your search.' : 'No tasks yet, add your first one!'}
@@ -293,7 +301,6 @@ export default function TasksPage() {
           const badge = getDueBadge(task.due_date)
           return (
             <li key={task.id} className={task.completed ? 'task-item completed' : 'task-item'}>
-              {/* Checkbox */}
               <input
                 type="checkbox"
                 checked={task.completed}
@@ -302,7 +309,6 @@ export default function TasksPage() {
                 aria-label={`Mark "${task.title}" as ${task.completed ? 'incomplete' : 'complete'}`}
               />
 
-              {/* Task text (or edit input) */}
               <div className="task-content">
                 {editingId === task.id ? (
                   <input
@@ -329,7 +335,6 @@ export default function TasksPage() {
                 {badge && <span className={badge.className}>{badge.label}</span>}
               </div>
 
-              {/* Action buttons */}
               <div className="task-actions">
                 <button onClick={() => moveTask(task.id, 'up')} className="btn-icon" title="Move up" aria-label="Move up">&#9650;</button>
                 <button onClick={() => moveTask(task.id, 'down')} className="btn-icon" title="Move down" aria-label="Move down">&#9660;</button>

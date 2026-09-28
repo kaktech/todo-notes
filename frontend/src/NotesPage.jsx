@@ -2,30 +2,42 @@
  * NotesPage: create, edit, delete notes.
  * Notes list on the left, editor on the right.
  * Auto-save with debounce, search, last-updated time.
+ * Each user has a unique ID stored in localStorage so notes are separate.
  */
 import { useState, useEffect, useRef, useCallback } from 'react'
+
+// Get the same unique user ID used in TasksPage
+function getUserId() {
+  let id = localStorage.getItem('user_id')
+  if (!id) {
+    id = 'user-' + Math.random().toString(36).substring(2, 10)
+    localStorage.setItem('user_id', id)
+  }
+  return id
+}
+
+const USER_ID = getUserId()
 
 export default function NotesPage() {
   // --- State ---
   const [notes, setNotes] = useState([])
-  const [selectedId, setSelectedId] = useState(null) // which note is open
+  const [selectedId, setSelectedId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
   const [editContent, setEditContent] = useState('')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [saved, setSaved] = useState(false) // show "Saved" indicator
+  const [saved, setSaved] = useState(false)
 
-  // Ref to store the debounce timer
   const debounceRef = useRef(null)
 
-  // --- Fetch notes from the API ---
+  // --- Fetch notes from the API (only for this user) ---
   const fetchNotes = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      let url = '/api/notes'
-      if (search) url += '?search=' + encodeURIComponent(search)
+      let url = `/api/notes?user_id=${USER_ID}`
+      if (search) url += '&search=' + encodeURIComponent(search)
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to load notes')
       const data = await res.json()
@@ -47,7 +59,7 @@ export default function NotesPage() {
       const res = await fetch('/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Note', content: '' }),
+        body: JSON.stringify({ user_id: USER_ID, title: 'New Note', content: '' }),
       })
       if (!res.ok) throw new Error('Failed to create note')
       const note = await res.json()
@@ -60,7 +72,7 @@ export default function NotesPage() {
     }
   }
 
-  // --- Select a note to edit ---
+  // --- Select a note ---
   function selectNote(note) {
     setSelectedId(note.id)
     setEditTitle(note.title)
@@ -69,14 +81,11 @@ export default function NotesPage() {
   }
 
   // --- Auto-save (debounced) ---
-  // This runs whenever the user types, but waits 500ms after they stop
   useEffect(() => {
     if (!selectedId) return
 
-    // Clear any existing timer
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
-    // Set a new timer
     debounceRef.current = setTimeout(async () => {
       try {
         await fetch(`/api/notes/${selectedId}`, {
@@ -85,13 +94,12 @@ export default function NotesPage() {
           body: JSON.stringify({ title: editTitle, content: editContent }),
         })
         setSaved(true)
-        fetchNotes() // refresh the list to show updated time
+        fetchNotes()
       } catch {
         setError('Failed to save note')
       }
-    }, 500) // wait 500ms after typing stops
+    }, 500)
 
-    // Cleanup on unmount
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
@@ -112,7 +120,7 @@ export default function NotesPage() {
     }
   }
 
-  // --- Format a date string nicely ---
+  // --- Format date ---
   function formatDate(dateStr) {
     if (!dateStr) return ''
     const d = new Date(dateStr)
@@ -122,18 +130,17 @@ export default function NotesPage() {
     })
   }
 
-  // --- Find the selected note object (for showing updated time) ---
   const selectedNote = notes.find(n => n.id === selectedId)
 
   // --- Render ---
   return (
     <div className="notes-page">
-      <h1>Notes</h1>
+      <h1>My Notes</h1>
 
       {error && <div className="error-banner">{error}</div>}
 
       <div className="notes-layout">
-        {/* Left side: notes list */}
+        {/* Left: notes list */}
         <div className="notes-list-panel">
           <div className="notes-list-header">
             <input
@@ -166,7 +173,7 @@ export default function NotesPage() {
           </ul>
         </div>
 
-        {/* Right side: editor */}
+        {/* Right: editor */}
         <div className="notes-editor-panel">
           {selectedId ? (
             <>

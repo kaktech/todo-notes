@@ -4,13 +4,14 @@ They also handle validation (e.g. rejecting empty titles).
 """
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 # --- Task schemas ---
 
 class TaskCreate(BaseModel):
     """Data needed to create a new task."""
+    user_id: str = Field(..., min_length=1, description="Unique browser ID for the user")
     title: str = Field(..., min_length=1, description="Task text (required, cannot be empty)")
     due_date: Optional[str] = Field(None, description="Optional due date in YYYY-MM-DD format")
 
@@ -25,18 +26,20 @@ class TaskUpdate(BaseModel):
 class TaskResponse(BaseModel):
     """Task data returned by the API."""
     id: int
+    user_id: str
     title: str
     completed: bool
     due_date: Optional[str] = None
     position: int
     created_at: datetime
 
-    # Tells Pydantic to read the data straight from our SQLAlchemy objects
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True  # tells Pydantic to read from SQLAlchemy objects
 
 
 class BulkCreate(BaseModel):
     """For bulk-adding many tasks at once."""
+    user_id: str = Field(..., min_length=1)
     titles: list[str] = Field(..., min_length=1, description="List of task titles")
 
 
@@ -44,6 +47,7 @@ class BulkCreate(BaseModel):
 
 class NoteCreate(BaseModel):
     """Data needed to create a new note."""
+    user_id: str = Field(..., min_length=1)
     title: str = Field(..., min_length=1)
     content: str = ""
 
@@ -57,10 +61,11 @@ class NoteUpdate(BaseModel):
 class NoteResponse(BaseModel):
     """Note data returned by the API."""
     id: int
+    user_id: str
     title: str
     content: str
     created_at: datetime
     updated_at: datetime
 
-    # Tells Pydantic to read the data straight from our SQLAlchemy objects
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
