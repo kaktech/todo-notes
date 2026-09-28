@@ -1,9 +1,9 @@
 /**
- * App: main component with NavBar, page switching, and theme provider.
+ * App: three-panel layout with sidebar, task list, and detail panel.
+ * No top nav bar — navigation is in the sidebar.
  */
 import { useState } from 'react'
 import { ThemeProvider } from './shared/ThemeContext'
-import NavBar from './shared/NavBar'
 import TasksPage from './features/tasks/TasksPage'
 import NotesPage from './features/notes/NotesPage'
 import './App.css'
@@ -13,10 +13,11 @@ function AppContent() {
 
   return (
     <div className="app">
-      <NavBar page={page} setPage={setPage} />
-      <main className="main-content">
-        {page === 'tasks' ? <TasksPage /> : <NotesPage />}
-      </main>
+      {page === 'tasks' ? (
+        <TasksPage />
+      ) : (
+        <NotesPage />
+      )}
     </div>
   )
 }

@@ -1,16 +1,28 @@
 """
 TaskFlow backend — wires all feature routers together.
 
-This file imports and includes the feature routers (tasks, categories, notes)
+This file imports and includes the feature routers (tasks, categories, notes, tags, subtasks)
 so the FastAPI app exposes all endpoints under /api.
 """
 from fastapi import FastAPI
 
+# Import all models FIRST so they register with Base.metadata
+from features.tasks.models import Task
+from features.categories.models import Category
+from features.notes.models import Note
+from features.tags.models import Tag, task_tags
+from features.subtasks.models import Subtask
+
+# Import routers
 from features.tasks.routes import router as tasks_router
 from features.categories.routes import router as categories_router
 from features.notes.routes import router as notes_router
 from features.tags.routes import router as tags_router
 from features.subtasks.routes import router as subtasks_router
+
+# Create all tables
+from database import Base, engine
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="TaskFlow API", version="1.0.0")
 

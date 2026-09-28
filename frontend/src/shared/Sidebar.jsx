@@ -167,17 +167,8 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Bottom section — Settings, Sign out, theme toggle */}
+      {/* Bottom section — just theme toggle */}
       <div className="sidebar-bottom">
-        <button className="sidebar-item">
-          <span className="sidebar-item-icon">&#9881;</span>
-          <span>Settings</span>
-        </button>
-        <button className="sidebar-item">
-          <span className="sidebar-item-icon">&#8618;</span>
-          <span>Sign out</span>
-        </button>
-
         {/* Dark/Light toggle */}
         <button
           className={`toggle-switch ${mode === 'dark' ? 'on' : ''}`}
