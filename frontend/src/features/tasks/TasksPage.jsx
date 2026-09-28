@@ -87,7 +87,7 @@ export default function TasksPage() {
   }
 
   async function handleSave(data) {
-    if (selectedTaskId) {
+    if (selectedTaskId && selectedTaskId !== 'new') {
       await updateTask(selectedTaskId, data)
     } else {
       await createTask(data)
@@ -95,12 +95,12 @@ export default function TasksPage() {
   }
 
   // Handle adding a new category
-  async function handleAddCategory(name) {
+  async function handleAddCategory(name, color = '#3B82F6') {
     const userId = localStorage.getItem('user_id')
     const res = await fetch('/api/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId, name }),
+      body: JSON.stringify({ user_id: userId, name, color }),
     })
     if (res.ok) {
       const cat = await res.json()

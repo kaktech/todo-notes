@@ -17,6 +17,7 @@ export default function Sidebar({
 }) {
   const { mode, toggle } = useTheme()
   const [newListName, setNewListName] = useState('')
+  const [newListColor, setNewListColor] = useState('#3B82F6')
   const [newTagName, setNewTagName] = useState('')
   const [showNewList, setShowNewList] = useState(false)
   const [showNewTag, setShowNewTag] = useState(false)
@@ -25,8 +26,9 @@ export default function Sidebar({
   async function handleAddList(e) {
     e.preventDefault()
     if (!newListName.trim()) return
-    await onAddCategory(newListName.trim())
+    await onAddCategory(newListName.trim(), newListColor)
     setNewListName('')
+    setNewListColor('#3B82F6')
     setShowNewList(false)
   }
 
@@ -116,15 +118,24 @@ export default function Sidebar({
         {/* Add new list */}
         {showNewList ? (
           <form onSubmit={handleAddList} className="sidebar-add-form">
-            <input
-              type="text"
-              value={newListName}
-              onChange={e => setNewListName(e.target.value)}
-              placeholder="List name"
-              className="sidebar-add-input"
-              autoFocus
-            />
-            <button type="submit" className="btn btn-primary btn-small">Add</button>
+            <div className="sidebar-add-row">
+              <input
+                type="color"
+                value={newListColor}
+                onChange={e => setNewListColor(e.target.value)}
+                className="color-picker"
+                title="Choose list color"
+              />
+              <input
+                type="text"
+                value={newListName}
+                onChange={e => setNewListName(e.target.value)}
+                placeholder="List name"
+                className="sidebar-add-input"
+                autoFocus
+              />
+              <button type="submit" className="btn btn-primary btn-small">Add</button>
+            </div>
           </form>
         ) : (
           <button className="sidebar-item sidebar-add" onClick={() => setShowNewList(true)}>
