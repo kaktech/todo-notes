@@ -1,13 +1,12 @@
 /**
- * TasksPage: the main tasks screen.
- * Shows greeting, progress bar, search, filter tabs, grouped tasks,
- * and a FAB to add new tasks.
+ * TasksPage: big "Today" heading, horizontal date pills,
+ * tasks grouped by category with uppercase section labels.
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useTasks } from './useTasks'
 import TaskList from './TaskList'
 import TaskForm from './TaskForm'
-import ProgressBar from './ProgressBar'
+import DatePicker from './DatePicker'
 import SearchBar from '../../shared/SearchBar'
 import FAB from '../../shared/FAB'
 
@@ -19,6 +18,7 @@ export default function TasksPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
   const [categories, setCategories] = useState([])
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
 
   // Fetch categories once on mount
   useEffect(() => {
@@ -28,20 +28,31 @@ export default function TasksPage() {
       .catch(() => {})
   }, [])
 
-  // Fetch tasks when filter or search changes
+  // Fetch tasks when filter, search, or date changes
   const loadTasks = useCallback(() => {
-    const params = {}
+    const params = { date: selectedDate }
     if (filter !== 'all') params.filter = filter
     if (search) params.search = search
     fetchTasks(params)
-  }, [filter, search, fetchTasks])
+  }, [filter, search, selectedDate, fetchTasks])
 
   useEffect(() => { loadTasks() }, [loadTasks])
 
-  // Count today's tasks for greeting
-  const today = new Date().toISOString().split('T')[0]
-  const todayTasks = tasks.filter(t => t.due_date === today)
-  const completedToday = todayTasks.filter(t => t.completed).length
+  // Progress for selected date
+  const dayTasks = tasks.filter(t => t.due_date === selectedDate)
+  const completedToday = dayTasks.filter(t => t.completed).length
+
+  // Group tasks by category
+  const grouped = {}
+  const uncategorized = []
+  tasks.forEach(task => {
+    if (task.category_id) {
+      if (!grouped[task.category_id]) grouped[task.category_id] = []
+      grouped[task.category_id].push(task)
+    } else {
+      uncategorized.push(task)
+    }
+  })
 
   // Handle toggle complete
   async function handleToggle(task) {
@@ -64,22 +75,23 @@ export default function TasksPage() {
     if (editingTask) {
       await updateTask(editingTask.id, data)
     } else {
-      await createTask(data)
+      await createTask({ ...data, due_date: data.due_date || selectedDate })
     }
     setEditingTask(null)
   }
 
   return (
     <div className="tasks-page">
-      {/* Greeting header */}
-      <div className="greeting">
-        <h1>You have {todayTasks.length} task{todayTasks.length === 1 ? '' : 's'} today to complete</h1>
-      </div>
+      {/* Big bold heading */}
+      <h1 className="page-heading">Today</h1>
 
       {error && <div className="error-banner">{error}</div>}
 
-      {/* Progress bar */}
-      <ProgressBar completed={completedToday} total={todayTasks.length} />
+      {/* Progress text */}
+      <p className="progress-text">{completedToday} of {dayTasks.length} completed today</p>
+
+      {/* Date picker — horizontal pill row */}
+      <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} />
 
       {/* Search bar */}
       <SearchBar value={search} onChange={setSearch} placeholder="Search tasks..." />
@@ -107,15 +119,44 @@ export default function TasksPage() {
       {/* Loading state */}
       {loading && <div className="loading">Loading tasks...</div>}
 
-      {/* Task list */}
-      <TaskList
-        tasks={tasks}
-        categories={categories}
-        onToggle={handleToggle}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onReorder={reorderTasks}
-      />
+      {/* Tasks grouped by category */}
+      {categories.map(cat => {
+        const catTasks = grouped[cat.id] || []
+        if (catTasks.length === 0) return null
+        return (
+          <div key={cat.id}>
+            <div className="section-label">{cat.name}</div>
+            <TaskList
+              tasks={catTasks}
+              categories={categories}
+              onToggle={handleToggle}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onReorder={reorderTasks}
+            />
+          </div>
+        )
+      })}
+
+      {/* Uncategorized tasks */}
+      {uncategorized.length > 0 && (
+        <div>
+          <div className="section-label">Tasks</div>
+          <TaskList
+            tasks={uncategorized}
+            categories={categories}
+            onToggle={handleToggle}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onReorder={reorderTasks}
+          />
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && tasks.length === 0 && (
+        <div className="empty-state">Nothing here yet</div>
+      )}
 
       {/* FAB — floating action button */}
       <FAB onClick={() => { setEditingTask(null); setShowForm(true) }} />

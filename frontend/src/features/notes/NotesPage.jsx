@@ -1,6 +1,6 @@
 /**
  * NotesPage: notes list on the left, editor on the right.
- * Auto-save, search, and last-updated time.
+ * Same Modernist/Editorial typographic style.
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useNotes } from './useNotes'
@@ -18,16 +18,13 @@ export default function NotesPage() {
 
   useEffect(() => { loadNotes() }, [loadNotes])
 
-  // Find the selected note object
   const selectedNote = notes.find(n => n.id === selectedId)
 
-  // Create a new note and select it
   async function handleNew() {
     const note = await createNote()
     setSelectedId(note.id)
   }
 
-  // Delete a note
   async function handleDelete(id) {
     await deleteNote(id)
     if (selectedId === id) setSelectedId(null)
@@ -35,7 +32,7 @@ export default function NotesPage() {
 
   return (
     <div className="notes-page">
-      <h1>Notes</h1>
+      <h1 className="page-heading">Notes</h1>
       {error && <div className="error-banner">{error}</div>}
 
       <div className="notes-layout">

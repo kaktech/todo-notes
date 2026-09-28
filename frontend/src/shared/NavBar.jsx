@@ -1,5 +1,6 @@
 /**
- * NavBar: top navigation with page links and dark/light toggle.
+ * NavBar: minimal top navigation with page links and dark/light toggle.
+ * No heavy branding — just clean text links and a toggle switch.
  */
 import { useTheme } from './ThemeContext'
 
@@ -8,8 +9,6 @@ export default function NavBar({ page, setPage }) {
 
   return (
     <nav className="navbar">
-      <div className="nav-brand">TaskFlow</div>
-
       <div className="nav-links">
         <button
           className={page === 'tasks' ? 'nav-btn active' : 'nav-btn'}
@@ -27,14 +26,11 @@ export default function NavBar({ page, setPage }) {
 
       {/* Dark/Light toggle switch */}
       <button
-        className="toggle-switch"
+        className={`toggle-switch ${mode === 'dark' ? 'on' : ''}`}
         onClick={toggle}
         aria-label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
-        title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
       >
-        <span className="toggle-circle">
-          {mode === 'dark' ? '\u263D' : '\u2600'}
-        </span>
+        <span className="toggle-circle" />
       </button>
     </nav>
   )

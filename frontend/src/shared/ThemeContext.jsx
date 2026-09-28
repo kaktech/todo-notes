@@ -1,6 +1,7 @@
 /**
  * ThemeContext: provides dark/light mode state to the whole app.
  * Persists the user's choice in localStorage.
+ * Light mode is the default (matches reference screenshot).
  */
 import { createContext, useContext, useState, useEffect } from 'react'
 import { themes } from '../theme/colors'
@@ -8,21 +9,18 @@ import { themes } from '../theme/colors'
 const ThemeContext = createContext()
 
 export function ThemeProvider({ children }) {
-  // Check localStorage for saved theme, default to dark
+  // Check localStorage for saved theme, default to light
   const [mode, setMode] = useState(() => {
-    return localStorage.getItem('theme') || 'dark'
+    return localStorage.getItem('theme') || 'light'
   })
 
-  // Save theme choice and apply to DOM whenever it changes
+  // Save theme choice and apply to DOM
   useEffect(() => {
     localStorage.setItem('theme', mode)
     document.documentElement.setAttribute('data-theme', mode)
   }, [mode])
 
-  // Toggle between dark and light
   const toggle = () => setMode(m => (m === 'dark' ? 'light' : 'dark'))
-
-  // Current theme colors
   const colors = themes[mode]
 
   return (
@@ -32,7 +30,6 @@ export function ThemeProvider({ children }) {
   )
 }
 
-// Custom hook so any component can access theme
 export function useTheme() {
   return useContext(ThemeContext)
 }

@@ -1,34 +1,33 @@
 /**
  * Theme color values for dark and light mode.
- * Dark mode is the default theme.
+ * Modernist/Editorial design — bold typography, minimal color, cream backgrounds.
+ * Light mode is the default (matches reference screenshot).
  */
 export const themes = {
-  dark: {
-    background: '#0F0F14',
-    card: '#1B1B24',
-    cardHover: '#252532',
-    primary: '#3B82F6',
-    primaryLight: '#60A5FA',
-    text: '#E5E7EB',
-    textMuted: '#9CA3AF',
-    border: '#2D2D3A',
-    success: '#22C55E',
-    danger: '#EF4444',
-    warning: '#F59E0B',
-    shadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-  },
   light: {
-    background: '#F8FAFC',
-    card: '#FFFFFF',
-    cardHover: '#F1F5F9',
-    primary: '#2563EB',
-    primaryLight: '#3B82F6',
-    text: '#1E293B',
-    textMuted: '#64748B',
-    border: '#E2E8F0',
-    success: '#16A34A',
-    danger: '#DC2626',
-    warning: '#D97706',
-    shadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+    background: '#F5F3EF',       // soft cream/off-white page background
+    card: '#FFFFFF',            // card/panel background
+    row: '#EDEAE4',              // task row background (slightly darker than page)
+    primary: '#1A1A1A',          // near-black for headings and selected states
+    text: '#1A1A1A',             // main text color
+    textMuted: '#9CA3AF',        // muted text
+    accent: '#C97B4A',           // terracotta accent for section labels
+    accentDark: '#1A1A1A',       // selected date pill background
+    accentDarkText: '#FFFFFF',   // text on selected date pill
+    border: '#E5E2DC',           // subtle borders
+    shadow: 'none',              // no heavy shadows — flat design
+  },
+  dark: {
+    background: '#17171A',       // dark page background
+    card: '#1E1E22',            // card/panel background
+    row: '#232326',              // task row background
+    primary: '#F1F1F1',          // near-white for headings
+    text: '#F1F1F1',             // main text color
+    textMuted: '#6B6B70',        // muted text
+    accent: '#E0975E',           // warmer orange for dark mode
+    accentDark: '#F1F1F1',       // selected date pill background
+    accentDarkText: '#17171A',   // text on selected date pill
+    border: '#2E2E33',           // subtle borders
+    shadow: 'none',              // no heavy shadows
   },
 }
