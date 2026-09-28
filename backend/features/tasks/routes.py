@@ -18,22 +18,30 @@ def get_tasks(
     filter: str = Query("all", description="Filter: all, active, completed, overdue"),
     search: Optional[str] = Query(None, description="Search tasks by title"),
     category_id: Optional[int] = Query(None, description="Filter by category"),
+    tag_id: Optional[int] = Query(None, description="Filter by tag"),
+    date: Optional[str] = Query(None, description="Filter by due date (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
 ):
     """Get all tasks for a specific user, optionally filtered and/or searched."""
-    from datetime import date
+    from datetime import date as date_type
     query = db.query(Task).filter(Task.user_id == user_id)
 
     if search:
         query = query.filter(Task.title.ilike(f"%{search}%"))
     if category_id is not None:
         query = query.filter(Task.category_id == category_id)
+    if tag_id is not None:
+        # Filter tasks that have this tag (via join table)
+        from features.tags.models import task_tags
+        query = query.join(task_tags, Task.id == task_tags.c.task_id).filter(task_tags.c.tag_id == tag_id)
+    if date is not None:
+        query = query.filter(Task.due_date == date)
     if filter == "active":
         query = query.filter(Task.completed == False)
     elif filter == "completed":
         query = query.filter(Task.completed == True)
     elif filter == "overdue":
-        today = date.today().isoformat()
+        today = date_type.today().isoformat()
         query = query.filter(
             Task.completed == False,
             Task.due_date.isnot(None),

@@ -1,173 +1,187 @@
 /**
- * TasksPage: big "Today" heading, horizontal date pills,
- * tasks grouped by category with uppercase section labels.
+ * TasksPage: three-panel layout.
+ * Left: Sidebar. Middle: task list. Right: task detail panel.
  */
 import { useState, useEffect, useCallback } from 'react'
-import { useTasks } from './useTasks'
+import Sidebar from '../../shared/Sidebar'
 import TaskList from './TaskList'
-import TaskForm from './TaskForm'
-import DatePicker from './DatePicker'
-import SearchBar from '../../shared/SearchBar'
-import FAB from '../../shared/FAB'
+import TaskDetailPanel from './TaskDetailPanel'
+import { useTasks } from './useTasks'
 
 export default function TasksPage() {
   const { tasks, loading, error, fetchTasks, createTask, updateTask, deleteTask, reorderTasks, clearCompleted } = useTasks()
 
-  const [filter, setFilter] = useState('all')
+  const [view, setView] = useState('today') // today, upcoming, calendar, notes, list-{id}, tag-{id}
   const [search, setSearch] = useState('')
-  const [showForm, setShowForm] = useState(false)
-  const [editingTask, setEditingTask] = useState(null)
+  const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [categories, setCategories] = useState([])
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [tags, setTags] = useState([])
 
-  // Fetch categories once on mount
+  // Fetch categories and tags on mount
   useEffect(() => {
-    fetch('/api/categories?user_id=' + localStorage.getItem('user_id'))
-      .then(r => r.json())
-      .then(setCategories)
-      .catch(() => {})
+    const userId = localStorage.getItem('user_id')
+    fetch(`/api/categories?user_id=${userId}`).then(r => r.json()).then(setCategories).catch(() => {})
+    fetch(`/api/tags?user_id=${userId}`).then(r => r.json()).then(setTags).catch(() => {})
   }, [])
 
-  // Fetch tasks when filter, search, or date changes
+  // Fetch tasks based on current view
   const loadTasks = useCallback(() => {
-    const params = { date: selectedDate }
-    if (filter !== 'all') params.filter = filter
+    const params = {}
     if (search) params.search = search
+
+    if (view === 'today') {
+      params.date = new Date().toISOString().split('T')[0]
+    } else if (view === 'upcoming') {
+      params.filter = 'active'
+      // Client-side filter for future dates
+    } else if (view.startsWith('list-')) {
+      params.category_id = parseInt(view.replace('list-', ''))
+    } else if (view.startsWith('tag-')) {
+      params.tag_id = parseInt(view.replace('tag-', ''))
+    }
+
     fetchTasks(params)
-  }, [filter, search, selectedDate, fetchTasks])
+  }, [view, search, fetchTasks])
 
   useEffect(() => { loadTasks() }, [loadTasks])
 
-  // Progress for selected date
-  const dayTasks = tasks.filter(t => t.due_date === selectedDate)
-  const completedToday = dayTasks.filter(t => t.completed).length
+  // Filter for upcoming (future dates, incomplete)
+  const displayTasks = view === 'upcoming'
+    ? tasks.filter(t => !t.completed && t.due_date && t.due_date > new Date().toISOString().split('T')[0])
+    : tasks
 
-  // Group tasks by category
-  const grouped = {}
-  const uncategorized = []
-  tasks.forEach(task => {
-    if (task.category_id) {
-      if (!grouped[task.category_id]) grouped[task.category_id] = []
-      grouped[task.category_id].push(task)
-    } else {
-      uncategorized.push(task)
-    }
+  // Count tasks for sidebar badges
+  const today = new Date().toISOString().split('T')[0]
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const taskCounts = {
+    today: tasks.filter(t => t.due_date === today).length,
+    upcoming: tasks.filter(t => !t.completed && t.due_date && t.due_date > today).length,
+  }
+  categories.forEach(cat => {
+    taskCounts[`list-${cat.id}`] = tasks.filter(t => t.category_id === cat.id).length
   })
 
-  // Handle toggle complete
+  // Get view title
+  function getViewTitle() {
+    if (view === 'today') return 'Today'
+    if (view === 'upcoming') return 'Upcoming'
+    if (view === 'calendar') return 'Calendar'
+    if (view === 'notes') return 'Notes'
+    if (view.startsWith('list-')) {
+      const cat = categories.find(c => `list-${c.id}` === view)
+      return cat ? cat.name : 'Tasks'
+    }
+    if (view.startsWith('tag-')) {
+      const tag = tags.find(t => `tag-${t.id}` === view)
+      return tag ? tag.name : 'Tasks'
+    }
+    return 'Tasks'
+  }
+
+  // Handle task operations
   async function handleToggle(task) {
     await updateTask(task.id, { completed: !task.completed })
   }
 
-  // Handle edit
-  function handleEdit(task) {
-    setEditingTask(task)
-    setShowForm(true)
-  }
-
-  // Handle delete
   async function handleDelete(id) {
     await deleteTask(id)
+    if (selectedTaskId === id) setSelectedTaskId(null)
   }
 
-  // Handle form save
   async function handleSave(data) {
-    if (editingTask) {
-      await updateTask(editingTask.id, data)
+    if (selectedTaskId) {
+      await updateTask(selectedTaskId, data)
     } else {
-      await createTask({ ...data, due_date: data.due_date || selectedDate })
+      await createTask(data)
     }
-    setEditingTask(null)
   }
+
+  // Handle adding a new category
+  async function handleAddCategory(name) {
+    const userId = localStorage.getItem('user_id')
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, name }),
+    })
+    if (res.ok) {
+      const cat = await res.json()
+      setCategories(prev => [...prev, cat])
+    }
+  }
+
+  // Handle adding a new tag
+  async function handleAddTag(name) {
+    const userId = localStorage.getItem('user_id')
+    const res = await fetch('/api/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, name }),
+    })
+    if (res.ok) {
+      const tag = await res.json()
+      setTags(prev => [...prev, tag])
+    }
+  }
+
+  // Find selected task object
+  const selectedTask = tasks.find(t => t.id === selectedTaskId) || null
 
   return (
     <div className="tasks-page">
-      {/* Big bold heading */}
-      <h1 className="page-heading">Today</h1>
+      {/* Left sidebar */}
+      <Sidebar
+        view={view}
+        onViewChange={(v) => { setView(v); setSelectedTaskId(null) }}
+        categories={categories}
+        tags={tags}
+        taskCounts={taskCounts}
+        onAddCategory={handleAddCategory}
+        onAddTag={handleAddTag}
+        onSearch={setSearch}
+      />
 
-      {error && <div className="error-banner">{error}</div>}
+      {/* Middle panel — task list */}
+      <div className="task-panel">
+        <h1 className="panel-heading">
+          {getViewTitle()}
+          <span className="heading-count">{displayTasks.length}</span>
+        </h1>
 
-      {/* Progress text */}
-      <p className="progress-text">{completedToday} of {dayTasks.length} completed today</p>
+        {error && <div className="error-banner">{error}</div>}
 
-      {/* Date picker — horizontal pill row */}
-      <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} />
+        {/* Add new task row */}
+        <button className="add-task-row" onClick={() => setSelectedTaskId('new')}>
+          <span className="add-task-icon">+</span>
+          <span>Add New Task</span>
+        </button>
 
-      {/* Search bar */}
-      <SearchBar value={search} onChange={setSearch} placeholder="Search tasks..." />
+        {loading && <div className="loading">Loading tasks...</div>}
 
-      {/* Filter tabs */}
-      <div className="filter-tabs">
-        {['all', 'active', 'completed', 'overdue'].map(f => (
-          <button
-            key={f}
-            className={filter === f ? 'tab active' : 'tab'}
-            onClick={() => setFilter(f)}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
+        <TaskList
+          tasks={displayTasks}
+          categories={categories}
+          onToggle={handleToggle}
+          onEdit={(task) => setSelectedTaskId(task.id)}
+          onDelete={handleDelete}
+          onReorder={reorderTasks}
+          onSelect={(task) => setSelectedTaskId(task.id)}
+        />
+
+        {!loading && displayTasks.length === 0 && (
+          <div className="empty-state">Nothing here yet</div>
+        )}
       </div>
 
-      {/* Clear completed */}
-      {tasks.some(t => t.completed) && (
-        <button onClick={clearCompleted} className="btn btn-danger btn-small">
-          Clear completed
-        </button>
-      )}
-
-      {/* Loading state */}
-      {loading && <div className="loading">Loading tasks...</div>}
-
-      {/* Tasks grouped by category */}
-      {categories.map(cat => {
-        const catTasks = grouped[cat.id] || []
-        if (catTasks.length === 0) return null
-        return (
-          <div key={cat.id}>
-            <div className="section-label">{cat.name}</div>
-            <TaskList
-              tasks={catTasks}
-              categories={categories}
-              onToggle={handleToggle}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onReorder={reorderTasks}
-            />
-          </div>
-        )
-      })}
-
-      {/* Uncategorized tasks */}
-      {uncategorized.length > 0 && (
-        <div>
-          <div className="section-label">Tasks</div>
-          <TaskList
-            tasks={uncategorized}
-            categories={categories}
-            onToggle={handleToggle}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onReorder={reorderTasks}
-          />
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!loading && tasks.length === 0 && (
-        <div className="empty-state">Nothing here yet</div>
-      )}
-
-      {/* FAB — floating action button */}
-      <FAB onClick={() => { setEditingTask(null); setShowForm(true) }} />
-
-      {/* Task form modal */}
-      {showForm && (
-        <TaskForm
-          task={editingTask}
+      {/* Right panel — task detail */}
+      {selectedTaskId && (
+        <TaskDetailPanel
+          task={selectedTaskId === 'new' ? null : selectedTask}
           categories={categories}
+          tags={tags}
           onSave={handleSave}
-          onClose={() => { setShowForm(false); setEditingTask(null) }}
+          onDelete={handleDelete}
+          onClose={() => setSelectedTaskId(null)}
         />
       )}
     </div>
