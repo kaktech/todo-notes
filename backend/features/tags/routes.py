@@ -39,21 +39,26 @@ def delete_tag(tag_id: int, db: Session = Depends(get_db)):
     db.commit()
 
 
+# --- Get tags for a specific task ---
+
+@router.get("/tasks/{task_id}", response_model=list[TagResponse])
+def get_task_tags(task_id: int, db: Session = Depends(get_db)):
+    """Get all tags attached to a specific task."""
+    return db.query(Tag).join(task_tags, Tag.id == task_tags.c.tag_id).filter(task_tags.c.task_id == task_id).all()
+
+
 # --- Attach/Detach tags to tasks ---
 
 @router.post("/tasks/{task_id}/tags/{tag_id}", status_code=204)
 def attach_tag(task_id: int, tag_id: int, db: Session = Depends(get_db)):
     """Attach a tag to a task."""
-    # Verify task exists
     from features.tasks.models import Task
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    # Verify tag exists
     tag = db.query(Tag).filter(Tag.id == tag_id).first()
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
-    # Insert into join table
     db.execute(task_tags.insert().values(task_id=task_id, tag_id=tag_id))
     db.commit()
 

@@ -47,12 +47,9 @@ export default function TaskDetailPanel({
         .then(setSubtasks)
         .catch(() => {})
       // Load tags for this task
-      fetch(`/api/tasks?user_id=${localStorage.getItem('user_id')}`)
+      fetch(`/api/tags/tasks/${task.id}`)
         .then(r => r.json())
-        .then(tasks => {
-          const t = tasks.find(t => t.id === task.id)
-          if (t) setSelectedTagIds(t.tag_ids || [])
-        })
+        .then(tags => setSelectedTagIds(tags.map(t => t.id)))
         .catch(() => {})
     } else {
       setForm({ title: '', description: '', category_id: '', due_date: '' })

@@ -29,16 +29,14 @@ export default function TasksPage() {
     const params = {}
     if (search) params.search = search
 
-    if (view === 'today') {
-      params.date = new Date().toISOString().split('T')[0]
-    } else if (view === 'upcoming') {
+    if (view === 'upcoming') {
       params.filter = 'active'
-      // Client-side filter for future dates
     } else if (view.startsWith('list-')) {
       params.category_id = parseInt(view.replace('list-', ''))
     } else if (view.startsWith('tag-')) {
       params.tag_id = parseInt(view.replace('tag-', ''))
     }
+    // "today" view shows all tasks (no date filter) so nothing appears empty
 
     fetchTasks(params)
   }, [view, search, fetchTasks])
