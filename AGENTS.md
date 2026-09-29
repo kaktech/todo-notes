@@ -45,7 +45,7 @@ frontend/
   src/
     features/
       today/ week/ composer/ tasks/ categories/ tags/ subtasks/ notes/ settings/
-    shared/       # AppShell, Dock, Icon, EmptyState, ThemeContext, api.js, user.js, dates.js, useNow.js
+    shared/       # AppShell, Dock, TopNav, Icon, EmptyState, ThemeContext, api.js, user.js, dates.js, useNow.js, useMediaQuery.js
     theme/        # colors.js (tint choices; theme colours are CSS variables in App.css)
 ```
 
@@ -59,6 +59,8 @@ Translucent blurred panels floating over a soft blue gradient, bright top edges,
 
 **This is an original layout, not a copy of any reference app.** Keep wording and structure our own: sentence case, the words Now / Up next / Anytime / Slipped / Open air / Tint / Glyph / Steps / Setup. Do not reintroduce a left sidebar, a month-calendar sidebar, a day-strip + free-time timeline, or a long stacked "new task" modal.
 
+**Two layouts, on purpose (break at 900px).** Phones/tablets (under 900px): floating Dock, single column, bottom-sheet composer, Notes tiles → full editor. Laptops (900px and up): `TopNav` (brand, tabs, Add task), no dock; Today is a two-column dashboard with a sticky glass **side rail** (quick add, today-so-far bar, Slipped with Today/Tomorrow buttons, this-week glance); Notes is list + always-open editor; Setup is two columns; the composer is a wider card with vertical tabs. Switch with the CSS media query, or `useMediaQuery(DESKTOP_QUERY)` when React needs to render a different tree. Keep the two layouts different — do not collapse them into one.
+
 - **Light**: sky-blue gradient page (#DCEBFF → #B7D3FF) with blue/cyan/violet blobs, glass panels rgba(255,255,255,.36), text #0F1B3D, muted #5B6B8C
 - **Dark**: deep navy gradient (#0A1330 → #10285C), glass rgba(255,255,255,.07), text #EAF1FF, muted #9DB0D6
 - **Accent (primary)**: blue gradient #5AA9FF → #2F6BFF, white text — primary buttons, active dock item, the + button, active chips/tabs
@@ -66,7 +68,7 @@ Translucent blurred panels floating over a soft blue gradient, bright top edges,
 - **Glass recipe**: `background: var(--sheen), var(--glass)` + `backdrop-filter: var(--blur)` (28px, saturate 190%) + 1px `--glass-border` + `--glass-edge` hairline + bright top edge (`--hi-top`) + soft shadow. Add new panel classes to the shared glass selector list in App.css. Text-heavy panels (composer, dock) use a more opaque background. A `@supports` fallback keeps panels readable without backdrop-filter.
 - **Type**: Plus Jakarta Sans — 800 for headings, 700 for buttons/labels. Small uppercase labels ("eyebrow") use letter-spacing.
 - **Appearance**: System / Light / Dark in Setup (localStorage `theme`, `data-theme` on `<html>`; default Light)
-- **Navigation**: a floating glass **Dock** on every screen size — Today · Week · (+) · Notes · Setup. The + opens the composer from anywhere. No sidebar, no tab bar, no floating action button.
+- **Navigation**: phones use a floating glass **Dock** — Today · Week · (+) · Notes · Setup; laptops use the **TopNav** tabs plus an Add task button. The + / Add task opens the composer from anywhere. No sidebar, no tab bar, no floating action button.
 - **Today** (`features/today`): greeting + find-or-add line (typing filters, Enter opens the composer with that text); **Now** card with a countdown ring, Done and +15 min (or "Free for…" with Fill the gap when nothing is running); **Slipped** tray of overdue tasks — tap one to move it to Today/Tomorrow, edit or delete; **Up next** tiles (timed); **Anytime** tiles (drag to reorder); **Done** (collapsed). Empty day = "Open air".
 - **Week** (`features/week`): seven day columns, drag a card to another day to reschedule (time is kept); on phones the columns swipe. Jump to any date with the calendar button.
 - **Composer** (`features/composer`): one line to type — `parseQuickAdd` (`features/tasks/quickAdd.js`) understands "gym tomorrow 6pm for an hour" (dates like 5/10 are day/month). Tabs below: When · Look (tint + glyph) · Details (notes, list, priority, repeat) · Tags · Steps (subtasks). Centered card on desktop, bottom sheet on phones. New tasks default to today.

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { getUserId } from './user'
 import { useNow } from './useNow'
 import Dock from './Dock'
+import TopNav from './TopNav'
 import TodayView from '../features/today/TodayView'
 import WeekBoard from '../features/week/WeekBoard'
 import Composer from '../features/composer/Composer'
@@ -45,6 +46,8 @@ export default function AppShell() {
 
   return (
     <div className="shell">
+      <TopNav view={view} onNavigate={setView} onAdd={openComposer} />
+
       <header className="brand">
         <span className="brand-mark" aria-hidden="true">P</span>
         <span className="brand-name">Pane</span>
@@ -66,6 +69,8 @@ export default function AppShell() {
             onDelete={taskApi.deleteTask}
             onCompose={openComposer}
             onEdit={editTask}
+            onCreate={taskApi.createTask}
+            onOpenWeek={() => setView('week')}
           />
         )}
         {view === 'week' && (

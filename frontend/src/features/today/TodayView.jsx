@@ -9,7 +9,8 @@ import {
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy } from '@dnd-kit/sortable'
 import Icon from '../../shared/Icon'
 import EmptyState from '../../shared/EmptyState'
-import { DAYS_LONG, MONTHS, addDays, fromDateStr, greetingFor, minutesOfDay, todayStr, toMinutes, fromMinutes, formatDuration, shortDate } from '../../shared/dates'
+import { DAYS_LONG, DAYS_SHORT, MONTHS, addDays, fromDateStr, greetingFor, minutesOfDay, startOfWeek, todayStr, toMinutes, fromMinutes, formatDuration, shortDate } from '../../shared/dates'
+import { parseQuickAdd } from '../tasks/quickAdd'
 import { StaticTile, SortableTile } from '../tasks/PaneTile'
 import { DEFAULT_TASK_COLOR } from '../../theme/colors'
 
@@ -75,7 +76,7 @@ function SlippedTray({ tasks, onMove, onEdit, onDelete }) {
   const open = tasks.find(t => t.id === openId)
   if (tasks.length === 0) return null
   return (
-    <section className="slipped" aria-label="Slipped tasks">
+    <section className="slipped slipped-inline" aria-label="Slipped tasks">
       <p className="eyebrow">Slipped · {tasks.length} <span className="soft">tap one to reschedule</span></p>
       <div className="slipped-chips">
         {tasks.map(t => (
@@ -102,11 +103,127 @@ function SlippedTray({ tasks, onMove, onEdit, onDelete }) {
   )
 }
 
+/* ---------- Side rail (laptops): quick add, progress, slipped, week glance ---------- */
+
+function QuickAdd({ onCreate }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const parsed = text.trim() ? parseQuickAdd(text) : null
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!parsed || busy) return
+    const timed = !!parsed.start
+    const duration = parsed.duration || 30
+    setBusy(true)
+    setError('')
+    try {
+      await onCreate({
+        title: parsed.title,
+        description: '',
+        due_date: parsed.date || todayStr(),
+        start_time: timed ? parsed.start : null,
+        end_time: timed ? fromMinutes(toMinutes(parsed.start) + duration) : null,
+        priority: 'medium',
+        category_id: null,
+        recurrence: 'none',
+        color: DEFAULT_TASK_COLOR,
+        icon: 'target',
+      })
+      setText('')
+    } catch {
+      setError('Couldn\'t add that. Try again.')
+    }
+    setBusy(false)
+  }
+
+  return (
+    <form className="rail-card" onSubmit={submit}>
+      <p className="eyebrow">Quick add</p>
+      <input
+        className="field rail-input"
+        type="text"
+        value={text}
+        onChange={e => setText(e.target.value)}
+        placeholder="gym tomorrow 6pm for an hour"
+        aria-label="Quick add a task"
+      />
+      <div className="rail-parsed">
+        {parsed ? (
+          <>
+            <span className="tag tag-solid"><Icon name="calendar" size={12} strokeWidth={2.6} /> {parsed.date ? shortDate(parsed.date) : 'Today'}</span>
+            <span className="tag tag-solid"><Icon name="clock" size={12} strokeWidth={2.6} /> {parsed.start ? `${parsed.start} · ${formatDuration(parsed.duration || 30)}` : 'Anytime'}</span>
+          </>
+        ) : (
+          <span className="soft">Type it the way you'd say it, then press Enter.</span>
+        )}
+      </div>
+      {error && <p className="form-error">{error}</p>}
+      <button className="btn btn-primary btn-small" type="submit" disabled={!parsed || busy}>{busy ? 'Adding…' : 'Add'}</button>
+    </form>
+  )
+}
+
+function Rail({ tasks, slipped, todayTasks, now, onMove, onEdit, onDelete, onCreate, onOpenWeek }) {
+  const today = todayStr()
+  const total = todayTasks.length
+  const done = todayTasks.filter(t => t.completed).length
+  const weekStart = startOfWeek(today)
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const counts = days.map(d => tasks.filter(t => t.due_date === d && !t.completed).length)
+  const peak = Math.max(...counts, 1)
+
+  return (
+    <aside className="rail" aria-label="Side panel">
+      <QuickAdd onCreate={onCreate} />
+
+      <section className="rail-card">
+        <p className="eyebrow">Today so far</p>
+        <p className="rail-big">{done}<span> of {total} done</span></p>
+        <div className="bar" role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={total}>
+          <span style={{ width: total ? `${(done / total) * 100}%` : 0 }} />
+        </div>
+      </section>
+
+      <section className="rail-card">
+        <p className="eyebrow">Slipped · {slipped.length}</p>
+        {slipped.length === 0 && <p className="soft">Nothing slipped. Nice.</p>}
+        {slipped.map(t => (
+          <div className="rail-slip" key={t.id}>
+            <button className="rail-slip-title" onClick={() => onEdit(t)}>{t.title}</button>
+            <span className="slip-age">{daysLate(t.due_date)}d late</span>
+            <span className="rail-slip-actions">
+              <button className="btn btn-small btn-primary" onClick={() => onMove(t, today)}>Today</button>
+              <button className="btn btn-small" onClick={() => onMove(t, addDays(today, 1))}>Tomorrow</button>
+              <button className="icon-btn icon-btn-small icon-btn-danger" onClick={() => onDelete(t)} aria-label={`Delete ${t.title}`}><Icon name="trash" size={14} /></button>
+            </span>
+          </div>
+        ))}
+      </section>
+
+      <section className="rail-card">
+        <p className="eyebrow">This week</p>
+        <div className="glance">
+          {days.map((d, i) => (
+            <button key={d} className={`glance-row ${d === today ? 'is-today' : ''}`} onClick={onOpenWeek} aria-label={`${shortDate(d)}: ${counts[i]} open`}>
+              <span className="glance-day">{DAYS_SHORT[fromDateStr(d).getDay()]}</span>
+              <span className="glance-bar"><span style={{ width: `${(counts[i] / peak) * 100}%` }} /></span>
+              <span className="glance-n">{counts[i]}</span>
+            </button>
+          ))}
+        </div>
+        <button className="btn btn-small" onClick={onOpenWeek}>Open week board</button>
+      </section>
+    </aside>
+  )
+}
+
 /* ---------- Page ---------- */
 
 export default function TodayView({
   tasks, loading, error, categories, tags, taskTagMap, now,
-  onToggle, onUpdate, onReorder, onDelete, onCompose, onEdit,
+  onToggle, onUpdate, onReorder, onDelete, onCompose, onEdit, onCreate, onOpenWeek,
 }) {
   const [query, setQuery] = useState('')
   const [reorderError, setReorderError] = useState('')
@@ -173,8 +290,12 @@ export default function TodayView({
   const nothingAtAll = !loading && slipped.length === 0 && timedToday.length === 0 && anytime.length === 0 && doneToday.length === 0
   const allClear = !loading && !nothingAtAll && timedToday.length === 0 && anytime.length === 0 && slipped.length === 0
 
+  const todayTasks = tasks.filter(t => t.due_date === today)
+
   return (
     <div className="view today">
+     <div className="today-grid">
+      <div className="today-main">
       <header className="hero">
         <p className="eyebrow">{eyebrow}</p>
         <h1 className="hero-title">{greetingFor(d.getHours())}</h1>
@@ -257,6 +378,20 @@ export default function TodayView({
           )}
         </>
       )}
+      </div>
+
+      <Rail
+        tasks={tasks}
+        slipped={slipped}
+        todayTasks={todayTasks}
+        now={now}
+        onMove={(task, date) => onUpdate(task.id, { due_date: date })}
+        onEdit={onEdit}
+        onDelete={confirmDelete}
+        onCreate={onCreate}
+        onOpenWeek={onOpenWeek}
+      />
+     </div>
     </div>
   )
 }

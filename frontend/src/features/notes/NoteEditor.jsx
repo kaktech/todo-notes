@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import Icon from '../../shared/Icon'
 import { formatUpdated } from '../../shared/dates'
 
-export default function NoteEditor({ note, onSave, onDelete, onBack }) {
+export default function NoteEditor({ note, onSave, onDelete, onBack, hideBack = false }) {
   const [title, setTitle] = useState(note.title)
   const [content, setContent] = useState(note.content)
   const [status, setStatus] = useState('idle') // idle | saving | saved | error
@@ -51,9 +51,11 @@ export default function NoteEditor({ note, onSave, onDelete, onBack }) {
   return (
     <div className="note-editor">
       <div className="editor-bar">
-        <button className="icon-btn" onClick={onBack} aria-label="Back to notes">
-          <Icon name="arrow-left" size={20} strokeWidth={3} />
-        </button>
+        {hideBack ? <span /> : (
+          <button className="icon-btn" onClick={onBack} aria-label="Back to notes">
+            <Icon name="arrow-left" size={20} strokeWidth={3} />
+          </button>
+        )}
         <span className={`save-status ${status}`} aria-live="polite">
           {status === 'saving' && 'Saving…'}
           {status === 'saved' && <><Icon name="check" size={14} strokeWidth={3.5} /> Saved</>}
