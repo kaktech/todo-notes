@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// The proxy forwards /api calls to the backend on port 8000
-// so the frontend can use relative URLs (no CORS issues)
+// In production on Vercel, the frontend calls /api with relative paths.
+// Vercel's rewrite rules route /api/* to the backend service.
+// In local dev, the proxy forwards /api to the backend on port 8000.
 export default defineConfig({
   plugins: [react()],
   server: {
