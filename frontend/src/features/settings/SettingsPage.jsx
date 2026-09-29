@@ -8,9 +8,9 @@ import { useTheme } from '../../shared/ThemeContext'
 import { TASK_COLORS } from '../../theme/colors'
 
 const MODES = [
-  { id: 'system', label: 'SYSTEM', icon: 'monitor' },
-  { id: 'light', label: 'LIGHT', icon: 'sun' },
-  { id: 'dark', label: 'DARK', icon: 'moon' },
+  { id: 'system', label: 'System', icon: 'monitor' },
+  { id: 'light', label: 'Light', icon: 'sun' },
+  { id: 'dark', label: 'Dark', icon: 'moon' },
 ]
 
 function ListRow({ category, onUpdate, onDelete }) {
@@ -93,15 +93,15 @@ export default function SettingsPage({ taskCount, onDeleteAllTasks, listApi, tag
   }
 
   return (
-    <div className="page settings-page">
-      <header className="page-header">
-        <h1 className="page-title">Settings</h1>
+    <div className="view settings-page">
+      <header className="page-head">
+        <h1 className="hero-title">Setup</h1>
       </header>
 
       {error && <div className="error-banner" role="alert">{error}</div>}
 
       <section className="settings-section">
-        <h2 className="section-label">APPEARANCE</h2>
+        <h2 className="eyebrow section">Appearance</h2>
         <div className="segmented segmented-tall" role="group" aria-label="Appearance">
           {MODES.map(m => (
             <button
@@ -118,9 +118,9 @@ export default function SettingsPage({ taskCount, onDeleteAllTasks, listApi, tag
       </section>
 
       <section className="settings-section">
-        <h2 className="section-label">LISTS</h2>
+        <h2 className="eyebrow section">Lists</h2>
         <div className="settings-card">
-          {listApi.categories.length === 0 && <p className="muted-note">No lists yet. Lists group your tasks.</p>}
+          {listApi.categories.length === 0 && <p className="soft">No lists yet. Lists group related tasks.</p>}
           {listApi.categories.map(cat => (
             <ListRow
               key={cat.id}
@@ -140,16 +140,16 @@ export default function SettingsPage({ taskCount, onDeleteAllTasks, listApi, tag
             >
               {TASK_COLORS.map(c => <option key={c.value} value={c.value}>{c.name}</option>)}
             </select>
-            <button className="btn btn-small btn-primary" type="submit">ADD</button>
+            <button className="btn btn-small btn-primary" type="submit">Add</button>
           </form>
         </div>
       </section>
 
       <section className="settings-section">
-        <h2 className="section-label">TAGS</h2>
+        <h2 className="eyebrow section">Tags</h2>
         <div className="settings-card">
           <div className="tag-row">
-            {tagApi.tags.length === 0 && <p className="muted-note">No tags yet.</p>}
+            {tagApi.tags.length === 0 && <p className="soft">No tags yet.</p>}
             {tagApi.tags.map(tag => (
               <span key={tag.id} className="tag-pill">
                 {tag.name}
@@ -161,19 +161,19 @@ export default function SettingsPage({ taskCount, onDeleteAllTasks, listApi, tag
           </div>
           <form className="add-row" onSubmit={addTag}>
             <input className="field-input" value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="New tag name" aria-label="New tag name" />
-            <button className="btn btn-small btn-primary" type="submit">ADD</button>
+            <button className="btn btn-small btn-primary" type="submit">Add</button>
           </form>
         </div>
       </section>
 
       <section className="settings-section">
-        <h2 className="section-label">DATA</h2>
+        <h2 className="eyebrow section">Your data</h2>
         <button className="danger-row" onClick={deleteAll} disabled={taskCount === 0}>
           <Icon name="trash" size={22} />
-          <span className="danger-row-label">Delete all tasks</span>
+          <span className="danger-row-label">Clear every task</span>
           <span className="count-badge">{taskCount}</span>
         </button>
-        <p className="caption">Your tasks and notes are saved for this browser only.</p>
+        <p className="caption">Everything is saved for this browser only. A new browser starts empty.</p>
       </section>
     </div>
   )

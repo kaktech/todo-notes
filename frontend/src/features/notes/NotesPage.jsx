@@ -35,7 +35,7 @@ export default function NotesPage({ userId }) {
   const openNote = notes.find(n => n.id === openId)
   if (openNote) {
     return (
-      <div className="page notes-page">
+      <div className="view notes-page">
         <NoteEditor
           key={openNote.id}
           note={openNote}
@@ -48,11 +48,11 @@ export default function NotesPage({ userId }) {
   }
 
   return (
-    <div className="page notes-page">
-      <header className="page-header">
-        <h1 className="page-title">Notes <span className="count-badge">{notes.length}</span></h1>
-        <button className="btn btn-primary desktop-only" onClick={handleNew}>
-          <Icon name="plus" size={18} strokeWidth={3.5} /> NEW NOTE
+    <div className="view notes-page">
+      <header className="page-head">
+        <h1 className="hero-title">Notes <span className="count-badge">{notes.length}</span></h1>
+        <button className="btn btn-primary" onClick={handleNew}>
+          <Icon name="plus" size={18} strokeWidth={3.5} /> New note
         </button>
       </header>
 
@@ -62,7 +62,7 @@ export default function NotesPage({ userId }) {
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search notes..."
+          placeholder="Search your notes"
           aria-label="Search notes"
         />
       </label>
@@ -70,16 +70,16 @@ export default function NotesPage({ userId }) {
       {error && <div className="error-banner" role="alert">{error}</div>}
 
       {loading ? (
-        <p className="muted-note">Loading notes...</p>
+        <p className="soft">Loading…</p>
       ) : notes.length === 0 ? (
         search ? (
-          <p className="muted-note">No notes match "{search}".</p>
+          <p className="soft">No notes match “{search}”.</p>
         ) : (
           <EmptyState
             icon="note"
-            title="Jot something down"
-            text="Ideas, lists, anything you want to keep. Notes save themselves as you type."
-            actionLabel="ADD A NOTE"
+            title="A blank page"
+            text="Ideas, lists, half-thoughts. Notes save themselves as you type."
+            actionLabel="Start a note"
             onAction={handleNew}
           />
         )
@@ -89,15 +89,12 @@ export default function NotesPage({ userId }) {
             <button key={note.id} className="note-card" onClick={() => setOpenId(note.id)}>
               <span className="note-card-title">{note.title}</span>
               <span className="note-card-preview">{note.content || 'No content yet'}</span>
-              <span className="note-card-date">UPDATED {formatUpdated(note.updated_at).toUpperCase()}</span>
+              <span className="note-card-date">Updated {formatUpdated(note.updated_at)}</span>
             </button>
           ))}
         </div>
       )}
 
-      <button className="fab" onClick={handleNew} aria-label="New note">
-        <Icon name="plus" size={30} strokeWidth={3.5} />
-      </button>
     </div>
   )
 }

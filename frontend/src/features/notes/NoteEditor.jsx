@@ -55,7 +55,7 @@ export default function NoteEditor({ note, onSave, onDelete, onBack }) {
           <Icon name="arrow-left" size={20} strokeWidth={3} />
         </button>
         <span className={`save-status ${status}`} aria-live="polite">
-          {status === 'saving' && 'Saving...'}
+          {status === 'saving' && 'Saving…'}
           {status === 'saved' && <><Icon name="check" size={14} strokeWidth={3.5} /> Saved</>}
           {status === 'error' && 'Not saved'}
         </span>
@@ -69,15 +69,15 @@ export default function NoteEditor({ note, onSave, onDelete, onBack }) {
         className="note-title-input"
         value={title}
         onChange={e => { setTitle(e.target.value); change(e.target.value, content) }}
-        placeholder="Note title"
+        placeholder="Title"
         aria-label="Note title"
       />
-      <p className="note-updated">UPDATED {formatUpdated(note.updated_at).toUpperCase()}</p>
+      <p className="note-updated">Updated {formatUpdated(note.updated_at)}</p>
       <textarea
         className="note-content-input"
         value={content}
         onChange={e => { setContent(e.target.value); change(title, e.target.value) }}
-        placeholder="Start typing your note..."
+        placeholder="Start typing"
         aria-label="Note content"
       />
     </div>

@@ -1,5 +1,5 @@
 /**
- * Colour choices used by the New Task modal and list colour pickers.
+ * Tint choices used by the composer and list colour pickers.
  * Theme colours themselves (background, card, text...) live as CSS variables in App.css.
  */
 export const TASK_COLORS = [

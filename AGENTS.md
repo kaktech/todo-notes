@@ -7,7 +7,7 @@ Follow these rules in every session.
 
 ## Project Overview
 
-TaskFlow — a todo timeline + notes web app in a blue "Glass" (frosted glass) style. Built with FastAPI (Python) + React (Vite) + SQLite. There is no login: each browser gets a random id (`user_id` in localStorage) and only sees its own tasks, lists, tags, and notes.
+Pane — a glass-styled planner (today view, week board, notes) in a blue frosted-glass style. (Repo and folder names still say todo-notes / TaskFlow.) Built with FastAPI (Python) + React (Vite) + SQLite. There is no login: each browser gets a random id (`user_id` in localStorage) and only sees its own tasks, lists, tags, and notes.
 
 ---
 
@@ -44,36 +44,35 @@ backend/
 frontend/
   src/
     features/
-      tasks/ categories/ tags/ subtasks/ notes/ settings/
-    shared/       # AppShell, Sidebar, TabBar, MiniCalendar, Icon, EmptyState, ThemeContext, api.js, user.js, dates.js
-    theme/        # colors.js (task/list colour choices; theme colours are CSS variables in App.css)
+      today/ week/ composer/ tasks/ categories/ tags/ subtasks/ notes/ settings/
+    shared/       # AppShell, Dock, Icon, EmptyState, ThemeContext, api.js, user.js, dates.js, useNow.js
+    theme/        # colors.js (tint choices; theme colours are CSS variables in App.css)
 ```
 
 New code always goes in its feature's folder. Do not add logic to main.py beyond wiring routers.
 
 ---
 
-## Design system — "Glass" (frosted glass, blue)
+## Design system — "Pane" (frosted glass, blue)
 
-Translucent blurred panels floating over a soft blue gradient, thin light borders, gentle shadows, rounded corners, one blue accent. No hard black borders or offset shadows (that was the old neobrutalist "Tempo" look — do not bring it back). All colours are CSS variables at the top of `frontend/src/App.css` (`:root` and `:root[data-theme='dark']`) — never hardcode a theme colour elsewhere.
+Translucent blurred panels floating over a soft blue gradient, bright top edges, gentle shadows, very round corners, one blue accent. No hard black borders or offset shadows (old neobrutalist look — do not bring it back). All colours are CSS variables at the top of `frontend/src/App.css` (`:root` and `:root[data-theme='dark']`) — never hardcode a theme colour elsewhere.
 
-- **Light**: sky-blue gradient page (#DCEBFF → #B7D3FF) with soft blue/cyan/violet blobs, glass panels rgba(255,255,255,.55), text #0F1B3D, muted #5B6B8C
-- **Dark**: deep navy gradient (#0A1330 → #10285C), glass panels rgba(255,255,255,.08), text #EAF1FF, muted #9DB0D6
-- **Accent (primary)**: blue gradient #5AA9FF → #2F6BFF with white text — primary buttons, active nav/tab, floating +, mini-calendar selected day, active segments/chips/icon cell, today card
-- **Secondary**: sky/cyan gradient #8BE9FF → #38BDF8 with dark text — selected card in the date strip, mini-calendar "today", year pill, count badges
-- **Glass recipe**: `background: var(--sheen), var(--glass)` (translucent fill + diagonal light sheen) + `backdrop-filter: var(--blur)` (28px blur, saturate 190%) + 1px `--glass-border` + `--glass-edge` hairline + bright top edge (`--hi-top`) + soft shadow. Add new panel classes to the shared glass selector list in App.css. Panels that hold lots of text (modal, tab bar) use a more opaque background so text stays readable. A `@supports` fallback makes panels near-opaque where backdrop-filter is missing.
-- **Corners**: 14-20px on cards/inputs, 28px on the modal and empty-state card, pills/circles fully round
-- **Type**: Plus Jakarta Sans everywhere — 800 for headings, 700 for buttons/labels, 400-600 for body. Small uppercase labels use letter-spacing.
-- **Appearance setting**: System / Light / Dark (localStorage `theme`, applied as `data-theme` on `<html>`; default Light)
-- **Date strip**: selected = sky gradient, today (when not selected) = blue gradient. **Mini calendar**: selected = blue, today = sky.
-- **Task cards** (`features/tasks/TaskCard.jsx`) show ONLY: coloured icon badge + colour edge, time/date line, bold title (struck through + muted when done), chips (HIGH priority, list, #tags), edit + delete buttons, check circle. Never show the raw description on a card — it lives in the task modal's "More options". Tags come from one call, `GET /api/tags/task-map`.
-- **Empty states**: centered glass card, blue gradient square icon badge, bold heading, muted text, blue pill button (`EmptyState` in `shared/`)
-- **Layout**: desktop = 280px glass sidebar (logo, + NEW TASK, Timeline / Notes / Settings, mini calendar) + main area. Below 768px = no sidebar; floating glass bottom tab bar (Notes / Timeline / Settings), floating blue + button, full-screen modals. Switch with the media query in App.css and `.desktop-only`, not JS.
-- **New/Edit Task modal** (`features/tasks/NewTaskModal.jsx`): title + icon preview + time summary, WHEN (Timeline/Inbox), DATE, START, DURATION chips, COLOUR dots, ICON grid, and an expandable "More options" (description, list, priority, repeat, tags, subtasks). "Inbox" = no time yet (start/end saved as null). Default task colour is blue.
-- **Calendar** (`shared/MiniCalendar.jsx`): round days with a status dot (blue open, red overdue, green done). Sidebar on desktop; on mobile it opens as a sheet from the calendar button in the top bar.
-- **Overdue**: incomplete tasks due before today are listed in a red-tinted collapsible OVERDUE panel above the day's tasks (hidden on their own day), each with a "move to today" button.
+**This is an original layout, not a copy of any reference app.** Keep wording and structure our own: sentence case, the words Now / Up next / Anytime / Slipped / Open air / Tint / Glyph / Steps / Setup. Do not reintroduce a left sidebar, a month-calendar sidebar, a day-strip + free-time timeline, or a long stacked "new task" modal.
+
+- **Light**: sky-blue gradient page (#DCEBFF → #B7D3FF) with blue/cyan/violet blobs, glass panels rgba(255,255,255,.36), text #0F1B3D, muted #5B6B8C
+- **Dark**: deep navy gradient (#0A1330 → #10285C), glass rgba(255,255,255,.07), text #EAF1FF, muted #9DB0D6
+- **Accent (primary)**: blue gradient #5AA9FF → #2F6BFF, white text — primary buttons, active dock item, the + button, active chips/tabs
+- **Secondary**: sky gradient #8BE9FF → #38BDF8, dark text — count badges, today's outline on the week board
+- **Glass recipe**: `background: var(--sheen), var(--glass)` + `backdrop-filter: var(--blur)` (28px, saturate 190%) + 1px `--glass-border` + `--glass-edge` hairline + bright top edge (`--hi-top`) + soft shadow. Add new panel classes to the shared glass selector list in App.css. Text-heavy panels (composer, dock) use a more opaque background. A `@supports` fallback keeps panels readable without backdrop-filter.
+- **Type**: Plus Jakarta Sans — 800 for headings, 700 for buttons/labels. Small uppercase labels ("eyebrow") use letter-spacing.
+- **Appearance**: System / Light / Dark in Setup (localStorage `theme`, `data-theme` on `<html>`; default Light)
+- **Navigation**: a floating glass **Dock** on every screen size — Today · Week · (+) · Notes · Setup. The + opens the composer from anywhere. No sidebar, no tab bar, no floating action button.
+- **Today** (`features/today`): greeting + find-or-add line (typing filters, Enter opens the composer with that text); **Now** card with a countdown ring, Done and +15 min (or "Free for…" with Fill the gap when nothing is running); **Slipped** tray of overdue tasks — tap one to move it to Today/Tomorrow, edit or delete; **Up next** tiles (timed); **Anytime** tiles (drag to reorder); **Done** (collapsed). Empty day = "Open air".
+- **Week** (`features/week`): seven day columns, drag a card to another day to reschedule (time is kept); on phones the columns swipe. Jump to any date with the calendar button.
+- **Composer** (`features/composer`): one line to type — `parseQuickAdd` (`features/tasks/quickAdd.js`) understands "gym tomorrow 6pm for an hour" (dates like 5/10 are day/month). Tabs below: When · Look (tint + glyph) · Details (notes, list, priority, repeat) · Tags · Steps (subtasks). Centered card on desktop, bottom sheet on phones. New tasks default to today.
+- **Task tiles** (`features/tasks/PaneTile.jsx`) show ONLY: glyph, time line, bold title (struck through + muted when done), chips (High priority, list, #tags), Mark done, edit, delete. Never show the raw description on a tile — it lives in the composer's Details tab. Tags come from one call, `GET /api/tags/task-map`.
 - **Durations**: chips from 5m to 8h plus a custom-minutes box (max 23h59).
-- **Timeline**: timed tasks sorted by start time with "Xh Ym free" + "+ PLAN" gap rows; untimed tasks (no time, or no date) sit in a drag-to-reorder "No time yet" list.
+- **Notes**: glass sticky-note tiles in columns; tap to open a full editor with auto-save. **Setup**: appearance, lists, tags, clear every task.
 - Dates are always local-time "YYYY-MM-DD" strings from `shared/dates.js` — never `toISOString()` (it shifts the day near midnight).
 
 ---
@@ -83,7 +82,7 @@ Translucent blurred panels floating over a soft blue gradient, thin light border
 - **Title/description merge**: Title and description fields must always be fully independent state. They were once concatenated by a shared form-state bug — if you touch the task form, re-verify they're still separate.
 - **Tag attach on new task**: Tag-attach code must never assume `task.id` exists. When creating a brand-new task, hold selected tags in local state and attach them via the API only after the task is saved and a real ID exists.
 - **Seed data**: Do not seed demo/default lists (e.g. "personal", "list 2") for new users — new accounts start with zero lists.
-- **Subtasks on a new task**: like tags, hold them in local state and create them via the API only after the task has a real id.
+- **Steps (subtasks) on a new task**: like tags, hold them in local state and create them via the API only after the task has a real id.
 - **Notes auto-save**: flush unsaved edits when leaving the editor, and never PUT an empty title (422).
 
 ---

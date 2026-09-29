@@ -53,3 +53,29 @@ export function formatUpdated(dateStr) {
   const d = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(dateStr) ? dateStr : dateStr + 'Z')
   return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
+
+/** Monday of the week that contains the given "YYYY-MM-DD" date. */
+export function startOfWeek(s) {
+  const d = fromDateStr(s)
+  const back = (d.getDay() + 6) % 7
+  d.setDate(d.getDate() - back)
+  return toDateStr(d)
+}
+
+export function greetingFor(hour) {
+  if (hour < 5) return 'Still up'
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
+/** Minutes since midnight for a Date. */
+export function minutesOfDay(d) {
+  return d.getHours() * 60 + d.getMinutes()
+}
+
+/** Short label for a date: "Tue 29 Sep". */
+export function shortDate(s) {
+  const d = fromDateStr(s)
+  return `${DAYS_LONG[d.getDay()].slice(0, 3)} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}`
+}
