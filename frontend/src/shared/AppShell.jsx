@@ -46,7 +46,7 @@ export default function AppShell() {
   return (
     <div className="shell">
       <header className="brand">
-        <span className="brand-mark" aria-hidden="true" />
+        <span className="brand-mark" aria-hidden="true">P</span>
         <span className="brand-name">Pane</span>
       </header>
 
