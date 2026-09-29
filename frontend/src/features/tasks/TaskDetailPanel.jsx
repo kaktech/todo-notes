@@ -30,6 +30,7 @@ export default function TaskDetailPanel({
   })
   const [subtasks, setSubtasks] = useState([])
   const [selectedTagIds, setSelectedTagIds] = useState([])
+  const [pendingTags, setPendingTags] = useState([]) // tags to attach after new task is saved
   const [hasChanges, setHasChanges] = useState(false)
 
   // Load task data when task changes
@@ -68,10 +69,20 @@ export default function TaskDetailPanel({
   // Handle save
   async function handleSave() {
     if (!form.title.trim()) return
-    await onSave({
-      ...form,
+    // Send title and description as separate, explicit fields
+    const result = await onSave({
+      title: form.title,
+      description: form.description,
       category_id: form.category_id || null,
+      due_date: form.due_date || null,
     })
+    // If this was a new task and we have pending tags, attach them now
+    if (result && result.id && pendingTags.length > 0) {
+      for (const tagId of pendingTags) {
+        await fetch(`/api/tags/tasks/${result.id}/tags/${tagId}`, { method: 'POST' })
+      }
+      setPendingTags([])
+    }
     setHasChanges(false)
   }
 
@@ -126,13 +137,27 @@ export default function TaskDetailPanel({
 
   // Handle tag operations
   async function handleAttachTag(tagId) {
-    await fetch(`/api/tags/tasks/${task.id}/tags/${tagId}`, { method: 'POST' })
-    setSelectedTagIds(prev => [...prev, tagId])
+    if (task) {
+      // Existing task: attach immediately
+      await fetch(`/api/tags/tasks/${task.id}/tags/${tagId}`, { method: 'POST' })
+      setSelectedTagIds(prev => [...prev, tagId])
+    } else {
+      // New task: store as pending, will attach after save
+      setPendingTags(prev => [...prev, tagId])
+      setSelectedTagIds(prev => [...prev, tagId])
+    }
   }
 
   async function handleDetachTag(tagId) {
-    await fetch(`/api/tags/tasks/${task.id}/tags/${tagId}`, { method: 'DELETE' })
-    setSelectedTagIds(prev => prev.filter(id => id !== tagId))
+    if (task) {
+      // Existing task: detach immediately
+      await fetch(`/api/tags/tasks/${task.id}/tags/${tagId}`, { method: 'DELETE' })
+      setSelectedTagIds(prev => prev.filter(id => id !== tagId))
+    } else {
+      // New task: remove from pending
+      setPendingTags(prev => prev.filter(id => id !== tagId))
+      setSelectedTagIds(prev => prev.filter(id => id !== tagId))
+    }
   }
 
   return (

@@ -89,8 +89,17 @@ export default function TasksPage() {
   async function handleSave(data) {
     if (selectedTaskId && selectedTaskId !== 'new') {
       await updateTask(selectedTaskId, data)
+      return null
     } else {
-      await createTask(data)
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, user_id: localStorage.getItem('user_id') }),
+      })
+      if (!res.ok) throw new Error('Failed to create task')
+      const newTask = await res.json()
+      await fetchTasks()
+      return newTask
     }
   }
 

@@ -32,17 +32,21 @@ export default function TagPicker({ tags, selectedTagIds, onAttach, onDetach }) 
       </div>
 
       {/* Dropdown with available tags */}
-      {showDropdown && availableTags.length > 0 && (
+      {showDropdown && (
         <div className="tag-dropdown">
-          {availableTags.map(tag => (
-            <button
-              key={tag.id}
-              className="tag-dropdown-item"
-              onClick={() => { onAttach(tag.id); setShowDropdown(false) }}
-            >
-              {tag.name}
-            </button>
-          ))}
+          {availableTags.length > 0 ? (
+            availableTags.map(tag => (
+              <button
+                key={tag.id}
+                className="tag-dropdown-item"
+                onClick={() => { onAttach(tag.id); setShowDropdown(false) }}
+              >
+                {tag.name}
+              </button>
+            ))
+          ) : (
+            <div className="tag-dropdown-empty">No tags available</div>
+          )}
         </div>
       )}
     </div>
