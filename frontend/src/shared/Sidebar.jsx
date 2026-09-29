@@ -104,15 +104,31 @@ export default function Sidebar({
         <div className="sidebar-section-title">Lists</div>
 
         {categories.map(cat => (
-          <button
+          <div
             key={cat.id}
-            className={`sidebar-item ${view === `list-${cat.id}` ? 'active' : ''}`}
-            onClick={() => onViewChange(`list-${cat.id}`)}
+            className={`sidebar-item-wrapper ${view === `list-${cat.id}` ? 'active' : ''}`}
           >
-            <span className="colored-dot" style={{ backgroundColor: cat.color }} />
-            <span>{cat.name}</span>
-            <span className="count-badge">{taskCounts[`list-${cat.id}`] || 0}</span>
-          </button>
+            <button
+              className="sidebar-item"
+              onClick={() => onViewChange(`list-${cat.id}`)}
+            >
+              <span className="colored-dot" style={{ backgroundColor: cat.color }} />
+              <span>{cat.name}</span>
+              <span className="count-badge">{taskCounts[`list-${cat.id}`] || 0}</span>
+            </button>
+            <button
+              className="list-delete-btn"
+              onClick={() => {
+                if (window.confirm(`Delete list "${cat.name}"? Tasks will be moved to "No List".`)) {
+                  onDeleteCategory(cat.id)
+                }
+              }}
+              aria-label={`Delete list ${cat.name}`}
+              title="Delete list"
+            >
+              &#10005;
+            </button>
+          </div>
         ))}
 
         {/* Add new list */}

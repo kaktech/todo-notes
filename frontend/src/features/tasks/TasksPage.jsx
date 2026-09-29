@@ -117,6 +117,20 @@ export default function TasksPage() {
     }
   }
 
+  // Handle deleting a category (tasks move to "No List")
+  async function handleDeleteCategory(id) {
+    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setCategories(prev => prev.filter(c => c.id !== id))
+      // If we were viewing this list, switch to "today"
+      if (view === `list-${id}`) {
+        setView('today')
+        setSelectedTaskId(null)
+      }
+      await fetchTasks()
+    }
+  }
+
   // Handle adding a new tag
   async function handleAddTag(name) {
     const userId = localStorage.getItem('user_id')
@@ -145,6 +159,7 @@ export default function TasksPage() {
         taskCounts={taskCounts}
         onAddCategory={handleAddCategory}
         onAddTag={handleAddTag}
+        onDeleteCategory={handleDeleteCategory}
         onSearch={setSearch}
       />
 
