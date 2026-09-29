@@ -4,6 +4,7 @@
  */
 import { useState } from 'react'
 import { useTheme } from './ThemeContext'
+import { apiFetch } from './api'
 
 export default function Sidebar({
   view,
@@ -26,7 +27,16 @@ export default function Sidebar({
   async function handleAddList(e) {
     e.preventDefault()
     if (!newListName.trim()) return
-    await onAddCategory(newListName.trim(), newListColor)
+    const userId = localStorage.getItem('user_id')
+    const res = await apiFetch('/categories', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, name: newListName.trim(), color: newListColor }),
+    })
+    if (res.ok) {
+      const cat = await res.json()
+      // Call parent's onAddCategory to update state
+      onAddCategory(newListName.trim(), newListColor)
+    }
     setNewListName('')
     setNewListColor('#3B82F6')
     setShowNewList(false)
@@ -36,7 +46,15 @@ export default function Sidebar({
   async function handleAddTag(e) {
     e.preventDefault()
     if (!newTagName.trim()) return
-    await onAddTag(newTagName.trim())
+    const userId = localStorage.getItem('user_id')
+    const res = await apiFetch('/tags', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, name: newTagName.trim() }),
+    })
+    if (res.ok) {
+      const tag = await res.json()
+      onAddTag(newTagName.trim())
+    }
     setNewTagName('')
     setShowNewTag(false)
   }

@@ -9,6 +9,7 @@ import TaskList from './TaskList'
 import TaskDetailPanel from './TaskDetailPanel'
 import CalendarView from './CalendarView'
 import { useTasks } from './useTasks'
+import { apiFetch } from '../../shared/api'
 
 export default function TasksPage() {
   const { tasks, loading, error, fetchTasks, createTask, updateTask, deleteTask, reorderTasks, clearCompleted } = useTasks()
@@ -22,8 +23,8 @@ export default function TasksPage() {
   // Fetch categories and tags on mount
   useEffect(() => {
     const userId = localStorage.getItem('user_id')
-    fetch(`/api/categories?user_id=${userId}`).then(r => r.json()).then(setCategories).catch(() => {})
-    fetch(`/api/tags?user_id=${userId}`).then(r => r.json()).then(setTags).catch(() => {})
+    apiFetch(`/categories?user_id=${userId}`).then(r => r.json()).then(setCategories).catch(() => {})
+    apiFetch(`/tags?user_id=${userId}`).then(r => r.json()).then(setTags).catch(() => {})
   }, [])
 
   // Fetch tasks based on current view
@@ -92,9 +93,8 @@ export default function TasksPage() {
       await updateTask(selectedTaskId, data)
       return null
     } else {
-      const res = await fetch('/api/tasks', {
+      const res = await apiFetch('/tasks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...data, user_id: localStorage.getItem('user_id') }),
       })
       if (!res.ok) throw new Error('Failed to create task')
@@ -107,9 +107,8 @@ export default function TasksPage() {
   // Handle adding a new category
   async function handleAddCategory(name, color = '#3B82F6') {
     const userId = localStorage.getItem('user_id')
-    const res = await fetch('/api/categories', {
+    const res = await apiFetch('/categories', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId, name, color }),
     })
     if (res.ok) {
@@ -120,7 +119,7 @@ export default function TasksPage() {
 
   // Handle deleting a category (tasks move to "No List")
   async function handleDeleteCategory(id) {
-    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' })
+    const res = await apiFetch(`/categories/${id}`, { method: 'DELETE' })
     if (res.ok) {
       setCategories(prev => prev.filter(c => c.id !== id))
       if (view === `list-${id}`) {
@@ -134,9 +133,8 @@ export default function TasksPage() {
   // Handle adding a new tag
   async function handleAddTag(name) {
     const userId = localStorage.getItem('user_id')
-    const res = await fetch('/api/tags', {
+    const res = await apiFetch('/tags', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId, name }),
     })
     if (res.ok) {

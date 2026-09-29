@@ -3,6 +3,7 @@
  * Handles fetching, creating, updating, deleting, and reordering tasks.
  */
 import { useState, useEffect, useCallback } from 'react'
+import { apiFetch } from '../../shared/api'
 
 // Generate a unique user ID stored in localStorage
 function getUserId() {
@@ -27,7 +28,7 @@ export function useTasks() {
     setError('')
     try {
       const query = new URLSearchParams({ user_id: USER_ID, ...params })
-      const res = await fetch(`/api/tasks?${query}`)
+      const res = await apiFetch(`/tasks?${query}`)
       if (!res.ok) throw new Error('Failed to load tasks')
       setTasks(await res.json())
     } catch {

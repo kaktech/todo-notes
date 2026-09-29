@@ -5,6 +5,7 @@
  */
 import { useState, useEffect } from 'react'
 import TagPicker from '../tags/TagPicker'
+import { apiFetch } from '../../shared/api'
 
 export default function TaskDetailPanel({
   task,
@@ -13,12 +14,6 @@ export default function TaskDetailPanel({
   onSave,
   onDelete,
   onClose,
-  onAddSubtask,
-  onToggleSubtask,
-  onDeleteSubtask,
-  onUpdateSubtask,
-  onAttachTag,
-  onDetachTag,
 }) {
   // Local form state
   const [form, setForm] = useState({
@@ -27,9 +22,8 @@ export default function TaskDetailPanel({
     category_id: '',
     due_date: '',
   })
-  const [subtasks, setSubtasks] = useState([])
   const [selectedTagIds, setSelectedTagIds] = useState([])
-  const [pendingTags, setPendingTags] = useState([]) // tags to attach after new task is saved
+  const [pendingTags, setPendingTags] = useState([])
   const [hasChanges, setHasChanges] = useState(false)
 
   // Load task data when task changes
@@ -41,19 +35,13 @@ export default function TaskDetailPanel({
         category_id: task.category_id || '',
         due_date: task.due_date || '',
       })
-      // Load subtasks
-      fetch(`/api/tasks/${task.id}/subtasks`)
-        .then(r => r.json())
-        .then(setSubtasks)
-        .catch(() => {})
       // Load tags for this task
-      fetch(`/api/tags/tasks/${task.id}`)
+      apiFetch(`/tags/tasks/${task.id}`)
         .then(r => r.json())
         .then(tags => setSelectedTagIds(tags.map(t => t.id)))
         .catch(() => {})
     } else {
       setForm({ title: '', description: '', category_id: '', due_date: '' })
-      setSubtasks([])
       setSelectedTagIds([])
     }
     setHasChanges(false)
@@ -68,7 +56,6 @@ export default function TaskDetailPanel({
   // Handle save
   async function handleSave() {
     if (!form.title.trim()) return
-    // Send title and description as separate, explicit fields
     const result = await onSave({
       title: form.title,
       description: form.description,
@@ -78,7 +65,7 @@ export default function TaskDetailPanel({
     // If this was a new task and we have pending tags, attach them now
     if (result && result.id && pendingTags.length > 0) {
       for (const tagId of pendingTags) {
-        await fetch(`/api/tags/tasks/${result.id}/tags/${tagId}`, { method: 'POST' })
+        await apiFetch(`/tags/tasks/${result.id}/tags/${tagId}`, { method: 'POST' })
       }
       setPendingTags([])
     }
@@ -96,52 +83,12 @@ export default function TaskDetailPanel({
     }
   }
 
-  // Handle subtask operations
-  async function handleAddSubtask(title) {
-    const res = await fetch(`/api/tasks/${task.id}/subtasks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
-    })
-    if (res.ok) {
-      const sub = await res.json()
-      setSubtasks(prev => [...prev, sub])
-    }
-  }
-
-  async function handleToggleSubtask(subtask) {
-    const res = await fetch(`/api/subtasks/${subtask.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed: !subtask.completed }),
-    })
-    if (res.ok) {
-      setSubtasks(prev => prev.map(s => s.id === subtask.id ? { ...s, completed: !s.completed } : s))
-    }
-  }
-
-  async function handleDeleteSubtask(id) {
-    await fetch(`/api/subtasks/${id}`, { method: 'DELETE' })
-    setSubtasks(prev => prev.filter(s => s.id !== id))
-  }
-
-  async function handleUpdateSubtask(subtask, title) {
-    await fetch(`/api/subtasks/${subtask.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
-    })
-    setSubtasks(prev => prev.map(s => s.id === subtask.id ? { ...s, title } : s))
-  }
-
   // Handle tag operations
   async function handleAttachTag(tagId) {
     if (task) {
-      // Existing task: attach immediately
-      await fetch(`/api/tags/tasks/${task.id}/tags/${tagId}`, { method: 'POST' })
+      await apiFetch(`/tags/tasks/${task.id}/tags/${tagId}`, { method: 'POST' })
       setSelectedTagIds(prev => [...prev, tagId])
     } else {
-      // New task: store as pending, will attach after save
       setPendingTags(prev => [...prev, tagId])
       setSelectedTagIds(prev => [...prev, tagId])
     }
@@ -149,14 +96,23 @@ export default function TaskDetailPanel({
 
   async function handleDetachTag(tagId) {
     if (task) {
-      // Existing task: detach immediately
-      await fetch(`/api/tags/tasks/${task.id}/tags/${tagId}`, { method: 'DELETE' })
+      await apiFetch(`/tags/tasks/${task.id}/tags/${tagId}`, { method: 'DELETE' })
       setSelectedTagIds(prev => prev.filter(id => id !== tagId))
     } else {
-      // New task: remove from pending
       setPendingTags(prev => prev.filter(id => id !== tagId))
       setSelectedTagIds(prev => prev.filter(id => id !== tagId))
     }
+  }
+
+  // Handle tag creation
+  async function handleCreateTag(name) {
+    const userId = localStorage.getItem('user_id')
+    const res = await apiFetch('/tags', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, name }),
+    })
+    if (!res.ok) throw new Error('Failed to create tag')
+    return await res.json()
   }
 
   return (
@@ -218,26 +174,8 @@ export default function TaskDetailPanel({
           selectedTagIds={selectedTagIds}
           onAttach={handleAttachTag}
           onDetach={handleDetachTag}
-          onCreate={async (name) => {
-            const userId = localStorage.getItem('user_id')
-            const res = await fetch('/api/tags', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ user_id: userId, name }),
-            })
-            if (!res.ok) throw new Error('Failed to create tag')
-            const newTag = await res.json()
-            // Refresh tags list in parent
-            const tagsRes = await fetch(`/api/tags?user_id=${userId}`)
-            if (tagsRes.ok) {
-              const updatedTags = await tagsRes.json()
-              // We need to update the tags prop — but it's controlled by parent
-              // For now, just return the new tag and let parent handle it
-            }
-            return newTag
-          }}
+          onCreate={handleCreateTag}
         />
-
       </div>
 
       {/* Bottom buttons */}

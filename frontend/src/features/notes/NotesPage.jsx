@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useNotes } from './useNotes'
+import { apiFetch } from '../../shared/api'
 
 export default function NotesPage() {
   const { notes, loading, error, fetchNotes, createNote, updateNote, deleteNote } = useNotes()
@@ -36,6 +37,17 @@ export default function NotesPage() {
   async function handleDelete(id) {
     await deleteNote(id)
     setEditingNote(null)
+  }
+
+  // Create note helper that uses apiFetch
+  const createNoteWithApi = async () => {
+    const userId = localStorage.getItem('user_id')
+    const res = await apiFetch('/notes', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, title: 'New Note', content: '' }),
+    })
+    if (!res.ok) throw new Error('Failed to create note')
+    return await res.json()
   }
 
   // Format date

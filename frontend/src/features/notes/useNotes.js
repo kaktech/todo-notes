@@ -2,6 +2,7 @@
  * useNotes: custom hook for managing notes state and API calls.
  */
 import { useState, useEffect, useCallback } from 'react'
+import { apiFetch } from '../../shared/api'
 
 function getUserId() {
   let id = localStorage.getItem('user_id')
@@ -23,8 +24,8 @@ export function useNotes() {
     setLoading(true)
     setError('')
     try {
-      const url = search ? `/api/notes?user_id=${USER_ID}&search=${encodeURIComponent(search)}` : `/api/notes?user_id=${USER_ID}`
-      const res = await fetch(url)
+      const url = search ? `/notes?user_id=${USER_ID}&search=${encodeURIComponent(search)}` : `/notes?user_id=${USER_ID}`
+      const res = await apiFetch(url)
       if (!res.ok) throw new Error('Failed to load notes')
       setNotes(await res.json())
     } catch {
@@ -35,9 +36,8 @@ export function useNotes() {
   }, [])
 
   const createNote = async () => {
-    const res = await fetch('/api/notes', {
+    const res = await apiFetch('/notes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: USER_ID, title: 'New Note', content: '' }),
     })
     if (!res.ok) throw new Error('Failed to create note')
@@ -47,9 +47,8 @@ export function useNotes() {
   }
 
   const updateNote = async (id, updates) => {
-    const res = await fetch(`/api/notes/${id}`, {
+    const res = await apiFetch(`/notes/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     })
     if (!res.ok) throw new Error('Failed to update note')
@@ -57,7 +56,7 @@ export function useNotes() {
   }
 
   const deleteNote = async (id) => {
-    const res = await fetch(`/api/notes/${id}`, { method: 'DELETE' })
+    const res = await apiFetch(`/notes/${id}`, { method: 'DELETE' })
     if (!res.ok) throw new Error('Failed to delete note')
     await fetchNotes()
   }
