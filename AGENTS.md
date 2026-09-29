@@ -139,6 +139,7 @@ One Vercel project runs everything: static frontend + the API as a Python functi
 - **Files**: `vercel.json` (build command, output folder, `/api/*` → function), `api/index.py` (function entry), root `requirements.txt` (function deps), `.vercelignore`, `.python-version`.
 - **Setup**: import the GitHub repo in Vercel (framework preset "Other", root directory = repo root) → **Storage** tab → create a **Postgres** (Neon) database and connect it to the project (this sets `DATABASE_URL` / `POSTGRES_URL`) → deploy.
 - **Tables** are created automatically on the first request (`create_all` + `add_missing_columns` run when the function starts). New columns still need an entry in `NEW_COLUMNS` in `backend/database.py`.
+- **Python version**: Vercel builds with the newest Python (3.14 at the time of writing), so keep `requirements.txt` on releases that ship 3.14 wheels (e.g. `psycopg2-binary>=2.9.11`). A "Failed to build psycopg2" / "pg_config not found" error means a package has no wheel for Vercel's Python.
 - **Without a database** the function refuses to start on Vercel with a clear message (its disk is read-only and temporary, so SQLite would lose data).
 - **Check**: open `https://<your-site>/api/health` — it should return `{"status":"ok"}`.
 - The frontend calls relative `/api`, so no CORS and no `VITE_API_URL` are needed.

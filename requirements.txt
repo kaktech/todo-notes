@@ -1,6 +1,8 @@
 # Installed by Vercel for the Python function in api/index.py.
 # Keep in sync with backend/requirements.txt (that file also has the test tools).
+# Vercel currently builds with Python 3.14, so every package needs a 3.14-compatible release:
+# psycopg2-binary 2.9.10 has no 3.14 wheel and fails to build, so it must be 2.9.11 or newer.
 fastapi==0.115.6
-sqlalchemy==2.0.36
-pydantic>=2.10.4
-psycopg2-binary==2.9.10
+sqlalchemy>=2.0.43,<2.1
+pydantic>=2.12,<3
+psycopg2-binary>=2.9.11,<3
