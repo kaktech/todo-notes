@@ -53,10 +53,13 @@ def update_category(category_id: int, category_update: CategoryUpdate, db: Sessi
 
 @router.delete("/{category_id}", status_code=204)
 def delete_category(category_id: int, db: Session = Depends(get_db)):
-    """Delete a category by ID."""
+    """Delete a category by ID. Tasks in this category are moved to 'No List' (category_id=null)."""
     db_category = db.query(Category).filter(Category.id == category_id).first()
     if not db_category:
         raise HTTPException(status_code=404, detail="Category not found")
 
+    # Move all tasks in this category to "No List" before deleting
+    from features.tasks.models import Task
+    db.query(Task).filter(Task.category_id == category_id).update({Task.category_id: None})
     db.delete(db_category)
     db.commit()

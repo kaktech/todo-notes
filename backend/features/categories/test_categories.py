@@ -151,3 +151,18 @@ class TestCategories:
         """DELETE /api/categories/{id} with non-existent ID returns 404."""
         response = client.delete("/api/categories/9999")
         assert response.status_code == 404
+
+    def test_delete_category_moves_tasks_to_no_list(self, client):
+        """Deleting a category moves its tasks to 'No List' (category_id=null)."""
+        # Create a category and a task in it
+        cat = client.post("/api/categories", json={"user_id": USER_A, "name": "Work"}).json()
+        task = client.post("/api/tasks", json={"user_id": USER_A, "title": "Work task", "category_id": cat["id"]}).json()
+
+        # Delete the category
+        response = client.delete(f"/api/categories/{cat['id']}")
+        assert response.status_code == 204
+
+        # Verify the task's category_id is now null
+        tasks = client.get(f"/api/tasks?user_id={USER_A}").json()
+        work_task = [t for t in tasks if t["id"] == task["id"]][0]
+        assert work_task["category_id"] is None
