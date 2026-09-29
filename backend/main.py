@@ -1,10 +1,10 @@
 """
-TaskFlow backend — wires all feature routers together.
-
-This file imports and includes the feature routers (tasks, categories, notes, tags, subtasks)
-so the FastAPI app exposes all endpoints under /api.
+TaskFlow backend — wires all feature routers together and serves the React build.
 """
+import os
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # Import all models FIRST so they register with Base.metadata
 from features.tasks.models import Task
@@ -40,3 +40,19 @@ app.include_router(auth_router)
 @app.get("/api/health", tags=["health"])
 def health():
     return {"status": "ok"}
+
+
+# Serve the React build (production)
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+
+if os.path.isdir(FRONTEND_DIST):
+    # Serve static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    def serve_react(full_path: str):
+        """Serve the React app for any non-API route (client-side routing)."""
+        file_path = os.path.join(FRONTEND_DIST, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
