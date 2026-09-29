@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// In production, the frontend calls the backend via VITE_API_URL env var.
-// Set this in Vercel project settings to your backend URL (e.g. https://your-app.onrender.com).
+// On Vercel the backend runs as a function on the same site, so the frontend calls relative /api.
+// VITE_API_URL is only needed if the backend is hosted somewhere else.
 // In local dev, the proxy forwards /api to the backend on port 8000.
 export default defineConfig({
   plugins: [react()],

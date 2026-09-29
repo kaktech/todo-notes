@@ -1,14 +1,15 @@
 """
-Notes database — separate from the tasks database.
-This keeps notes data isolated and allows independent scaling.
+Notes database.
+Locally notes live in their own SQLite file (notes.db). With Postgres there is just one
+database, so the notes tables share it with everything else (the table names never clash).
 """
 import os
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from database import DATABASE_URL, IS_SQLITE, make_engine
 
-# Separate SQLite file for notes
-NOTES_DATABASE_URL = os.getenv("NOTES_DATABASE_URL", "sqlite:///./notes.db")
-notes_engine = create_engine(NOTES_DATABASE_URL, connect_args={"check_same_thread": False})
+_notes_url = os.getenv("NOTES_DATABASE_URL")
+NOTES_DATABASE_URL = _notes_url or ("sqlite:///./notes.db" if IS_SQLITE else DATABASE_URL)
+notes_engine = make_engine(NOTES_DATABASE_URL)
 NotesSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=notes_engine)
 
 # Separate Base for notes models

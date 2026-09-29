@@ -21,10 +21,10 @@ If you catch yourself repeating the same diagnosis, explanation, or plan more th
 
 - **Backend**: FastAPI, SQLAlchemy ORM, SQLite database. Auth endpoints (`/api/auth/*`) still exist but the frontend no longer uses them.
 - **Frontend**: React 19, Vite, plain CSS (no UI framework)
-- **Database**: SQLite file at `backend/app.db`. `create_all()` never alters existing tables, so new columns must also be listed in `NEW_COLUMNS` in `backend/database.py` (added at startup by `add_missing_columns()`).
+- **Database**: SQLite file at `backend/app.db` locally; Postgres when `DATABASE_URL` (or `POSTGRES_URL`) is set — `backend/database.py` picks the right engine, and notes share the same Postgres database. `create_all()` never alters existing tables, so new columns must also be listed in `NEW_COLUMNS` in `backend/database.py` (added at startup by `add_missing_columns()`).
 - **Data isolation**: data endpoints take a `user_id` (the browser's random id, from `shared/user.js`) from the frontend. Anyone who knows an id can read that data — it separates users, it is not security.
 - **API prefix**: All endpoints are under `/api`.
-- **Production**: FastAPI serves the built React app from `frontend/dist` at `/`
+- **Production (Vercel)**: the React build is served as static files; the FastAPI app runs as one serverless function (`api/index.py`) behind `/api/*`, with Postgres for data. Locally FastAPI can still serve `frontend/dist` and uses SQLite.
 
 ---
 
@@ -132,20 +132,21 @@ Translucent blurred panels floating over a soft blue gradient, bright top edges,
 
 ## Deployment
 
-### Render (recommended)
+### Vercel (primary)
+
+One Vercel project runs everything: static frontend + the API as a Python function + a Postgres database.
+
+- **Files**: `vercel.json` (build command, output folder, `/api/*` → function), `api/index.py` (function entry), root `requirements.txt` (function deps), `.vercelignore`, `.python-version`.
+- **Setup**: import the GitHub repo in Vercel (framework preset "Other", root directory = repo root) → **Storage** tab → create a **Postgres** (Neon) database and connect it to the project (this sets `DATABASE_URL` / `POSTGRES_URL`) → deploy.
+- **Tables** are created automatically on the first request (`create_all` + `add_missing_columns` run when the function starts). New columns still need an entry in `NEW_COLUMNS` in `backend/database.py`.
+- **Without a database** the function refuses to start on Vercel with a clear message (its disk is read-only and temporary, so SQLite would lose data).
+- **Check**: open `https://<your-site>/api/health` — it should return `{"status":"ok"}`.
+- The frontend calls relative `/api`, so no CORS and no `VITE_API_URL` are needed.
+- Data in a local `app.db` is not copied to Postgres automatically.
+- Not yet verified on a live Vercel deploy or against a real Postgres server (tests cover URL handling, engine choice and the function entry point with SQLite) — check the first deploy's function logs.
+
+### Render (alternative, single server)
 
 - **Build**: `cd frontend && npm install && npm run build && cd ../backend && pip3 install -r requirements.txt`
 - **Start**: `cd backend && python3 -m uvicorn main:app --host 0.0.0.0 --port $PORT`
-- App reads `PORT` from the environment; frontend calls `/api` with relative paths only
-- `runtime.txt` pins Python 3.12+ for Render compatibility
-
-### Vercel
-
-- **Frontend only**: Deploy the React app to Vercel
-- **Backend**: Deploy the FastAPI backend separately (Render, Railway, or Fly.io)
-- **Environment variables**: Set `VITE_API_URL` to your backend URL (e.g. `https://your-app.onrender.com`)
-- **Build command**: `npm run build`
-- **Output directory**: `dist`
-- **Install command**: `npm install`
-- **Framework preset**: Vite
-- **Note**: Vercel is serverless — it cannot run the SQLite backend. The backend must be hosted elsewhere.
+- Needs a persistent disk for the SQLite files (set `DATABASE_URL` and `NOTES_DATABASE_URL` to paths on it), or a Postgres `DATABASE_URL`. `runtime.txt` pins Python 3.12 for Render.
