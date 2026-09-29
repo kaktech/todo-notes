@@ -19,6 +19,8 @@ export default function TasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [categories, setCategories] = useState([])
   const [tags, setTags] = useState([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   // Fetch categories and tags on mount
   useEffect(() => {
@@ -154,7 +156,7 @@ export default function TasksPage() {
       {/* Left sidebar */}
       <Sidebar
         view={view}
-        onViewChange={(v) => { setView(v); setSelectedTaskId(null) }}
+        onViewChange={(v) => { setView(v); setSelectedTaskId(null); setSidebarOpen(false) }}
         categories={categories}
         tags={tags}
         taskCounts={taskCounts}
@@ -162,6 +164,8 @@ export default function TasksPage() {
         onAddTag={handleAddTag}
         onDeleteCategory={handleDeleteCategory}
         onSearch={setSearch}
+        mobileOpen={sidebarOpen}
+        onCloseMobile={() => setSidebarOpen(false)}
       />
 
       {/* Middle panel — task list or calendar */}
@@ -210,7 +214,9 @@ export default function TasksPage() {
           tags={tags}
           onSave={handleSave}
           onDelete={handleDelete}
-          onClose={() => setSelectedTaskId(null)}
+          onClose={() => { setSelectedTaskId(null); setDetailOpen(false) }}
+          mobileOpen={detailOpen}
+          onOpenMobile={() => setDetailOpen(true)}
         />
       )}
     </div>

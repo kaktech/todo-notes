@@ -19,9 +19,13 @@ import {
 import TaskCard from './TaskCard'
 
 export default function TaskList({ tasks, categories, onToggle, onEdit, onDelete, onReorder }) {
-  // Set up sensors for drag-and-drop (pointer + keyboard for accessibility)
+  // Set up sensors for drag-and-drop (pointer + touch + keyboard)
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Small movement before drag starts (prevents accidental drags on tap)
+      },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 

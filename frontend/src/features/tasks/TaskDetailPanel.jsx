@@ -14,6 +14,8 @@ export default function TaskDetailPanel({
   onSave,
   onDelete,
   onClose,
+  mobileOpen,
+  onOpenMobile,
 }) {
   // Local form state
   const [form, setForm] = useState({
@@ -116,8 +118,9 @@ export default function TaskDetailPanel({
   }
 
   return (
-    <div className="detail-panel">
+    <div className={`detail-panel ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="detail-header">
+        <button className="detail-back-btn" onClick={onClose} aria-label="Go back">&#8592; Back</button>
         <h2 className="detail-title">Task:</h2>
         <button className="detail-close" onClick={handleClose} aria-label="Close panel">&times;</button>
       </div>

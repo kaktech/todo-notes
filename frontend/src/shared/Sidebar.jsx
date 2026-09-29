@@ -15,6 +15,8 @@ export default function Sidebar({
   onAddCategory,
   onAddTag,
   onSearch,
+  mobileOpen,
+  onCloseMobile,
 }) {
   const { mode, toggle } = useTheme()
   const [newListName, setNewListName] = useState('')
@@ -60,12 +62,16 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="sidebar">
-      {/* Menu heading + hamburger */}
-      <div className="sidebar-header">
-        <h2 className="sidebar-title">Menu</h2>
-        <button className="hamburger" aria-label="Toggle menu">&#9776;</button>
-      </div>
+    <>
+      {/* Overlay for mobile */}
+      {mobileOpen && <div className="sidebar-overlay" onClick={onCloseMobile} />}
+
+      <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
+        {/* Menu heading + hamburger */}
+        <div className="sidebar-header">
+          <h2 className="sidebar-title">Menu</h2>
+          <button className="hamburger" onClick={onCloseMobile} aria-label="Close menu">&#10005;</button>
+        </div>
 
       {/* Search bar */}
       <div className="sidebar-search">
@@ -233,5 +239,6 @@ export default function Sidebar({
         </button>
       </div>
     </aside>
+    </>
   )
 }
