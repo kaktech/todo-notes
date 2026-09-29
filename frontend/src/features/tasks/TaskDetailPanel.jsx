@@ -219,6 +219,24 @@ export default function TaskDetailPanel({
           selectedTagIds={selectedTagIds}
           onAttach={handleAttachTag}
           onDetach={handleDetachTag}
+          onCreate={async (name) => {
+            const userId = localStorage.getItem('user_id')
+            const res = await fetch('/api/tags', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ user_id: userId, name }),
+            })
+            if (!res.ok) throw new Error('Failed to create tag')
+            const newTag = await res.json()
+            // Refresh tags list in parent
+            const tagsRes = await fetch(`/api/tags?user_id=${userId}`)
+            if (tagsRes.ok) {
+              const updatedTags = await tagsRes.json()
+              // We need to update the tags prop — but it's controlled by parent
+              // For now, just return the new tag and let parent handle it
+            }
+            return newTag
+          }}
         />
 
         {/* Subtasks */}

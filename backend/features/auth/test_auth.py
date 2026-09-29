@@ -177,3 +177,18 @@ class TestAuth:
         assert tasks_b.status_code == 200
         for t in tasks_b.json():
             assert t["user_id"] == "userB"
+
+    def test_new_user_has_zero_categories(self, client):
+        """A newly signed-up user should have zero categories/lists by default."""
+        # Signup a new user
+        signup = client.post("/api/auth/signup", json={
+            "username": "newuser",
+            "email": "new@example.com",
+            "password": "password123",
+        })
+        assert signup.status_code == 201
+
+        # Get categories for this user
+        cats = client.get("/api/categories?user_id=newuser")
+        assert cats.status_code == 200
+        assert cats.json() == []
