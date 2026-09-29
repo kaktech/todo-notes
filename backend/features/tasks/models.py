@@ -23,4 +23,6 @@ class Task(Base):
     alert_enabled = Column(Boolean, default=False)
     recurrence = Column(String, default="none")  # none / daily / weekly / monthly
     position = Column(Integer, default=0)
+    color = Column(String, nullable=True)        # hex like "#FF6B4A", chosen in the New Task modal
+    icon = Column(String, nullable=True)         # icon key like "coffee", chosen in the New Task modal
     created_at = Column(DateTime, default=datetime.utcnow)

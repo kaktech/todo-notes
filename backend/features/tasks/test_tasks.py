@@ -273,3 +273,50 @@ class TestTasks:
         response = client.delete(f"/api/tasks/completed?user_id={USER_A}")
         assert response.status_code == 204
         assert len(client.get(f"/api/tasks?user_id={USER_A}").json()) == 1
+
+
+class TestTaskColorIcon:
+    """Colour and icon are optional tags chosen in the New Task modal."""
+
+    def test_create_with_color_and_icon(self, client):
+        r = make_task(client, color="#FF6B4A", icon="coffee")
+        assert r.status_code == 201
+        assert r.json()["color"] == "#FF6B4A"
+        assert r.json()["icon"] == "coffee"
+
+    def test_color_and_icon_default_to_null(self, client):
+        r = make_task(client)
+        assert r.json()["color"] is None
+        assert r.json()["icon"] is None
+
+    def test_update_color_and_icon(self, client):
+        task_id = make_task(client).json()["id"]
+        r = client.put(f"/api/tasks/{task_id}", json={"color": "#2EC4B6", "icon": "book"})
+        assert r.status_code == 200
+        assert r.json()["color"] == "#2EC4B6"
+        assert r.json()["icon"] == "book"
+
+    def test_recurring_copy_keeps_color_and_icon(self, client):
+        task_id = make_task(
+            client, due_date="2026-10-03", recurrence="daily", color="#F2C94C", icon="sun"
+        ).json()["id"]
+        client.put(f"/api/tasks/{task_id}", json={"completed": True})
+        tasks = client.get(f"/api/tasks?user_id={USER_A}").json()
+        nxt = [t for t in tasks if t["id"] != task_id][0]
+        assert nxt["due_date"] == "2026-10-04"
+        assert nxt["color"] == "#F2C94C"
+        assert nxt["icon"] == "sun"
+
+
+def test_add_missing_columns_upgrades_old_database(tmp_path):
+    """An app.db created before color/icon existed gets the columns added."""
+    from sqlalchemy import create_engine, inspect, text
+    from database import add_missing_columns
+
+    old = create_engine(f"sqlite:///{tmp_path / 'old.db'}")
+    with old.begin() as conn:
+        conn.execute(text("CREATE TABLE tasks (id INTEGER PRIMARY KEY, title VARCHAR)"))
+    add_missing_columns(old)
+    add_missing_columns(old)  # running twice must be harmless
+    names = {c["name"] for c in inspect(old).get_columns("tasks")}
+    assert {"color", "icon"} <= names

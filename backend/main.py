@@ -23,8 +23,9 @@ from features.subtasks.routes import router as subtasks_router
 from features.auth.routes import router as auth_router
 
 # Create all tables
-from database import Base, engine
+from database import Base, engine, add_missing_columns
 Base.metadata.create_all(bind=engine)
+add_missing_columns()
 
 # Create notes tables (separate database)
 from database_notes import NotesBase, notes_engine

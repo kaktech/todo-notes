@@ -1,18 +1,16 @@
 /**
- * CategoryPicker: dropdown to select a category for a task.
+ * CategoryPicker: dropdown to choose a list for a task.
  */
 export default function CategoryPicker({ categories, value, onChange }) {
   return (
     <select
-      className="category-picker"
+      className="field-input"
       value={value || ''}
       onChange={e => onChange(e.target.value ? parseInt(e.target.value) : null)}
     >
-      <option value="">No category</option>
+      <option value="">No list</option>
       {categories.map(cat => (
-        <option key={cat.id} value={cat.id}>
-          {cat.name}
-        </option>
+        <option key={cat.id} value={cat.id}>{cat.name}</option>
       ))}
     </select>
   )

@@ -39,6 +39,27 @@ def delete_tag(tag_id: int, db: Session = Depends(get_db)):
     db.commit()
 
 
+# --- Which tags are on which tasks (one call, so the task list can show tags) ---
+
+@router.get("/task-map")
+def get_task_tag_map(
+    user_id: str = Query(..., description="Unique browser ID of the user"),
+    db: Session = Depends(get_db),
+):
+    """Return {task_id: [tag_id, ...]} for all of this user's tasks that have tags."""
+    from features.tasks.models import Task
+    rows = (
+        db.query(task_tags.c.task_id, task_tags.c.tag_id)
+        .join(Task, Task.id == task_tags.c.task_id)
+        .filter(Task.user_id == user_id)
+        .all()
+    )
+    result: dict[int, list[int]] = {}
+    for task_id, tag_id in rows:
+        result.setdefault(task_id, []).append(tag_id)
+    return result
+
+
 # --- Get tags for a specific task ---
 
 @router.get("/tasks/{task_id}", response_model=list[TagResponse])

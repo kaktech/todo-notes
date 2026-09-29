@@ -142,3 +142,41 @@ class TestTags:
         tasks = client.get(f"/api/tasks?user_id={USER_A}&tag_id={tag['id']}").json()
         assert len(tasks) == 1
         assert tasks[0]["title"] == "Task 1"
+
+
+class TestTaskTagMap:
+    """GET /api/tags/task-map lets the task list show tags without one call per task."""
+
+    def test_task_map_groups_tag_ids_by_task(self, client):
+        t1 = client.post("/api/tasks", json={"user_id": USER_A, "title": "One"}).json()
+        t2 = client.post("/api/tasks", json={"user_id": USER_A, "title": "Two"}).json()
+        client.post("/api/tasks", json={"user_id": USER_A, "title": "No tags"})
+        a = client.post("/api/tags", json={"user_id": USER_A, "name": "A"}).json()
+        b = client.post("/api/tags", json={"user_id": USER_A, "name": "B"}).json()
+        client.post(f"/api/tags/tasks/{t1['id']}/tags/{a['id']}")
+        client.post(f"/api/tags/tasks/{t1['id']}/tags/{b['id']}")
+        client.post(f"/api/tags/tasks/{t2['id']}/tags/{b['id']}")
+
+        response = client.get(f"/api/tags/task-map?user_id={USER_A}")
+        assert response.status_code == 200
+        data = response.json()
+        assert sorted(data[str(t1["id"])]) == sorted([a["id"], b["id"]])
+        assert data[str(t2["id"])] == [b["id"]]
+        assert len(data) == 2
+
+    def test_task_map_only_includes_own_tasks(self, client):
+        mine = client.post("/api/tasks", json={"user_id": USER_A, "title": "Mine"}).json()
+        theirs = client.post("/api/tasks", json={"user_id": USER_B, "title": "Theirs"}).json()
+        tag_a = client.post("/api/tags", json={"user_id": USER_A, "name": "A"}).json()
+        tag_b = client.post("/api/tags", json={"user_id": USER_B, "name": "B"}).json()
+        client.post(f"/api/tags/tasks/{mine['id']}/tags/{tag_a['id']}")
+        client.post(f"/api/tags/tasks/{theirs['id']}/tags/{tag_b['id']}")
+
+        data = client.get(f"/api/tags/task-map?user_id={USER_A}").json()
+        assert list(data.keys()) == [str(mine["id"])]
+
+    def test_task_map_empty(self, client):
+        assert client.get(f"/api/tags/task-map?user_id={USER_A}").json() == {}
+
+    def test_task_map_requires_user_id(self, client):
+        assert client.get("/api/tags/task-map").status_code == 422

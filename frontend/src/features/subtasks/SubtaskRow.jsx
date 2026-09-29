@@ -1,7 +1,9 @@
 /**
- * SubtaskRow: a single subtask with checkbox, text, and delete option.
+ * SubtaskRow: one subtask with a checkbox, its title, and a delete button.
  */
-export default function SubtaskRow({ subtask, onToggle, onDelete, onTitleChange }) {
+import Icon from '../../shared/Icon'
+
+export default function SubtaskRow({ subtask, onToggle, onDelete }) {
   return (
     <div className={`subtask-row ${subtask.completed ? 'completed' : ''}`}>
       <input
@@ -11,18 +13,14 @@ export default function SubtaskRow({ subtask, onToggle, onDelete, onTitleChange 
         className="subtask-checkbox"
         aria-label={`Mark "${subtask.title}" as ${subtask.completed ? 'incomplete' : 'complete'}`}
       />
-      <input
-        type="text"
-        value={subtask.title}
-        onChange={e => onTitleChange(subtask, e.target.value)}
-        className="subtask-input"
-      />
+      <span className="subtask-title">{subtask.title}</span>
       <button
-        className="subtask-delete"
-        onClick={() => onDelete(subtask.id)}
-        aria-label={`Delete subtask "${subtask.title}`}
+        type="button"
+        className="icon-btn icon-btn-small"
+        onClick={() => onDelete(subtask)}
+        aria-label={`Delete subtask "${subtask.title}"`}
       >
-        &times;
+        <Icon name="x" size={14} strokeWidth={3} />
       </button>
     </div>
   )

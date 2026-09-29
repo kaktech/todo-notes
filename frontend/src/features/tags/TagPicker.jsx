@@ -1,74 +1,66 @@
 /**
- * TagPicker: dropdown to select and attach tags to a task.
- * Shows available tags, allows creating new ones inline.
+ * TagPicker: attached tags as pills, plus a small panel to pick or create tags.
+ * onCreate must return the new tag (or null) — it is attached straight away.
  */
 import { useState } from 'react'
+import Icon from '../../shared/Icon'
 
 export default function TagPicker({ tags, selectedTagIds, onAttach, onDetach, onCreate }) {
-  const [showDropdown, setShowDropdown] = useState(false)
+  const [open, setOpen] = useState(false)
   const [newTagName, setNewTagName] = useState('')
 
-  // Tags not yet attached to this task
+  const selectedTags = tags.filter(t => selectedTagIds.includes(t.id))
   const availableTags = tags.filter(t => !selectedTagIds.includes(t.id))
 
-  // Get full tag objects for selected tags
-  const selectedTags = tags.filter(t => selectedTagIds.includes(t.id))
-
-  // Handle creating a new tag
-  async function handleCreate(e) {
-    e.preventDefault()
+  async function handleCreate() {
     const name = newTagName.trim()
     if (!name) return
-    const newTag = await onCreate(name)
-    if (newTag) {
-      onAttach(newTag.id)
+    const tag = await onCreate(name)
+    if (tag) {
+      await onAttach(tag.id)
       setNewTagName('')
-      setShowDropdown(false)
+      setOpen(false)
     }
   }
 
   return (
     <div className="tag-picker">
-      <div className="tag-picker-label">Tags</div>
-      <div className="tag-picker-row">
-        {/* Attached tags */}
+      <div className="tag-row">
         {selectedTags.map(tag => (
-          <span key={tag.id} className="tag-pill attached">
+          <span key={tag.id} className="tag-pill">
             {tag.name}
-            <button className="tag-remove" onClick={() => onDetach(tag.id)}>&times;</button>
+            <button type="button" className="tag-remove" onClick={() => onDetach(tag.id)} aria-label={`Remove tag ${tag.name}`}>
+              <Icon name="x" size={12} strokeWidth={3} />
+            </button>
           </span>
         ))}
-
-        {/* Add tag button */}
-        <button className="tag-pill tag-add" onClick={() => setShowDropdown(!showDropdown)}>
-          + Add Tag
+        <button type="button" className="tag-pill tag-add" onClick={() => setOpen(!open)}>
+          <Icon name="plus" size={12} strokeWidth={3} /> Tag
         </button>
       </div>
 
-      {/* Dropdown with create input + existing tags */}
-      {showDropdown && (
-        <div className="tag-dropdown">
-          {/* Create new tag form */}
-          <form onSubmit={handleCreate} className="tag-create-form">
+      {open && (
+        <div className="tag-panel">
+          <div className="subtask-add-row">
             <input
               type="text"
               value={newTagName}
               onChange={e => setNewTagName(e.target.value)}
-              placeholder="New tag name..."
-              className="tag-create-input"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreate() } }}
+              placeholder="New tag name"
+              className="field-input"
               autoFocus
             />
-            <button type="submit" className="btn btn-primary btn-small">Create</button>
-          </form>
-
-          {/* Existing tags to pick from */}
+            <button type="button" className="btn btn-small" onClick={handleCreate}>Create</button>
+          </div>
           {availableTags.length > 0 && (
-            <div className="tag-dropdown-list">
+            <div className="tag-row">
               {availableTags.map(tag => (
                 <button
                   key={tag.id}
-                  className="tag-dropdown-item"
-                  onClick={() => { onAttach(tag.id); setShowDropdown(false) }}
+                  type="button"
+                  className="tag-pill"
+                  onClick={() => { onAttach(tag.id); setOpen(false) }}
                 >
                   {tag.name}
                 </button>

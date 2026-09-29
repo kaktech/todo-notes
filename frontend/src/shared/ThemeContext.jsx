@@ -1,30 +1,47 @@
 /**
- * ThemeContext: provides dark/light mode state to the whole app.
- * Persists the user's choice in localStorage.
- * Light mode is the default (matches reference screenshot).
+ * ThemeContext: "system" | "light" | "dark" preference, saved in localStorage.
+ * `resolved` is the actual look ("light" or "dark") — for "system" it follows the OS.
+ * Light is the default for first-time visitors.
  */
 import { createContext, useContext, useState, useEffect } from 'react'
-import { themes } from '../theme/colors'
 
 const ThemeContext = createContext()
+const MODES = ['system', 'light', 'dark']
+
+function readMode() {
+  try {
+    const saved = localStorage.getItem('theme')
+    return MODES.includes(saved) ? saved : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
+function systemPrefersDark() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+}
 
 export function ThemeProvider({ children }) {
-  // Check localStorage for saved theme, default to light
-  const [mode, setMode] = useState(() => {
-    return localStorage.getItem('theme') || 'light'
-  })
+  const [mode, setMode] = useState(readMode)
+  const [systemDark, setSystemDark] = useState(systemPrefersDark)
 
-  // Save theme choice and apply to DOM
+  // Follow OS changes while in "system" mode
   useEffect(() => {
-    localStorage.setItem('theme', mode)
-    document.documentElement.setAttribute('data-theme', mode)
-  }, [mode])
+    const query = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = e => setSystemDark(e.matches)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
 
-  const toggle = () => setMode(m => (m === 'dark' ? 'light' : 'dark'))
-  const colors = themes[mode]
+  const resolved = mode === 'system' ? (systemDark ? 'dark' : 'light') : mode
+
+  useEffect(() => {
+    try { localStorage.setItem('theme', mode) } catch { /* private mode */ }
+    document.documentElement.setAttribute('data-theme', resolved)
+  }, [mode, resolved])
 
   return (
-    <ThemeContext.Provider value={{ mode, toggle, colors }}>
+    <ThemeContext.Provider value={{ mode, resolved, setMode }}>
       {children}
     </ThemeContext.Provider>
   )

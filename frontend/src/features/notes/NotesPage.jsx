@@ -1,128 +1,103 @@
 /**
- * NotesPage: simple grid layout — different from the three-panel task layout.
- * Shows notes as cards in a grid, click to edit in a modal.
+ * NotesPage: list of note cards (search + count), tap one to open the full editor.
+ * Works the same on desktop and mobile; the floating + is mobile-only.
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
+import Icon from '../../shared/Icon'
+import EmptyState from '../../shared/EmptyState'
+import { formatUpdated } from '../../shared/dates'
 import { useNotes } from './useNotes'
-import { apiFetch } from '../../shared/api'
+import NoteEditor from './NoteEditor'
 
-export default function NotesPage() {
-  const { notes, loading, error, fetchNotes, createNote, updateNote, deleteNote } = useNotes()
+export default function NotesPage({ userId }) {
+  const { notes, loading, error, fetchNotes, createNote, updateNote, deleteNote } = useNotes(userId)
   const [search, setSearch] = useState('')
-  const [editingNote, setEditingNote] = useState(null)
-  const [editTitle, setEditTitle] = useState('')
-  const [editContent, setEditContent] = useState('')
+  const [openId, setOpenId] = useState(null)
 
-  const loadNotes = useCallback(() => {
-    fetchNotes(search)
-  }, [search, fetchNotes])
+  useEffect(() => { fetchNotes(search) }, [search, fetchNotes])
 
-  useEffect(() => { loadNotes() }, [loadNotes])
-
-  // Open note for editing
-  function openNote(note) {
-    setEditingNote(note)
-    setEditTitle(note.title)
-    setEditContent(note.content)
+  async function handleNew() {
+    try {
+      const note = await createNote()
+      await fetchNotes(search)
+      setOpenId(note.id)
+    } catch {
+      window.alert('Could not create the note.')
+    }
   }
 
-  // Save edited note
-  async function handleSave() {
-    if (!editingNote) return
-    await updateNote(editingNote.id, { title: editTitle, content: editContent })
-    setEditingNote(null)
-  }
-
-  // Delete note
   async function handleDelete(id) {
+    if (!window.confirm('Delete this note?')) return
     await deleteNote(id)
-    setEditingNote(null)
+    setOpenId(null)
   }
 
-  // Create note helper that uses apiFetch
-  const createNoteWithApi = async () => {
-    const userId = localStorage.getItem('user_id')
-    const res = await apiFetch('/notes', {
-      method: 'POST',
-      body: JSON.stringify({ user_id: userId, title: 'New Note', content: '' }),
-    })
-    if (!res.ok) throw new Error('Failed to create note')
-    return await res.json()
-  }
-
-  // Format date
-  function formatDate(dateStr) {
-    if (!dateStr) return ''
-    return new Date(dateStr).toLocaleString(undefined, {
-      month: 'short', day: 'numeric', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    })
+  const openNote = notes.find(n => n.id === openId)
+  if (openNote) {
+    return (
+      <div className="page notes-page">
+        <NoteEditor
+          key={openNote.id}
+          note={openNote}
+          onSave={updateNote}
+          onDelete={handleDelete}
+          onBack={() => setOpenId(null)}
+        />
+      </div>
+    )
   }
 
   return (
-    <div className="notes-page">
-      <h1 className="page-heading">Notes</h1>
+    <div className="page notes-page">
+      <header className="page-header">
+        <h1 className="page-title">Notes <span className="count-badge">{notes.length}</span></h1>
+        <button className="btn btn-primary desktop-only" onClick={handleNew}>
+          <Icon name="plus" size={18} strokeWidth={3.5} /> NEW NOTE
+        </button>
+      </header>
 
-      {error && <div className="error-banner">{error}</div>}
-
-      {/* Search */}
-      <div className="notes-search">
+      <label className="search-box">
+        <Icon name="search" size={18} />
         <input
           type="text"
-          placeholder="Search notes..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="search-input"
+          placeholder="Search notes..."
+          aria-label="Search notes"
         />
-        <button onClick={async () => { const note = await createNote(); openNote(note) }} className="btn btn-primary">
-          + New Note
-        </button>
-      </div>
+      </label>
 
-      {loading && <div className="loading">Loading notes...</div>}
+      {error && <div className="error-banner" role="alert">{error}</div>}
 
-      {/* Notes grid — different from task list layout */}
-      {!loading && notes.length === 0 && (
-        <div className="empty-state">No notes yet</div>
-      )}
-
-      <div className="notes-grid">
-        {notes.map(note => (
-          <div key={note.id} className="note-card" onClick={() => openNote(note)}>
-            <h3 className="note-card-title">{note.title}</h3>
-            <p className="note-card-preview">{note.content.substring(0, 100)}{note.content.length > 100 ? '...' : ''}</p>
-            <span className="note-card-date">{formatDate(note.updated_at)}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Edit modal */}
-      {editingNote && (
-        <div className="modal-overlay" onClick={() => setEditingNote(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2>Edit Note</h2>
-            <input
-              type="text"
-              value={editTitle}
-              onChange={e => setEditTitle(e.target.value)}
-              className="form-input"
-              placeholder="Note title"
-            />
-            <textarea
-              value={editContent}
-              onChange={e => setEditContent(e.target.value)}
-              className="form-textarea"
-              placeholder="Note content..."
-              rows={8}
-            />
-            <div className="form-actions">
-              <button onClick={() => handleDelete(editingNote.id)} className="btn btn-danger">Delete</button>
-              <button onClick={() => setEditingNote(null)} className="btn btn-secondary">Cancel</button>
-              <button onClick={handleSave} className="btn btn-primary">Save</button>
-            </div>
-          </div>
+      {loading ? (
+        <p className="muted-note">Loading notes...</p>
+      ) : notes.length === 0 ? (
+        search ? (
+          <p className="muted-note">No notes match "{search}".</p>
+        ) : (
+          <EmptyState
+            icon="note"
+            title="Jot something down"
+            text="Ideas, lists, anything you want to keep. Notes save themselves as you type."
+            actionLabel="ADD A NOTE"
+            onAction={handleNew}
+          />
+        )
+      ) : (
+        <div className="notes-grid">
+          {notes.map(note => (
+            <button key={note.id} className="note-card" onClick={() => setOpenId(note.id)}>
+              <span className="note-card-title">{note.title}</span>
+              <span className="note-card-preview">{note.content || 'No content yet'}</span>
+              <span className="note-card-date">UPDATED {formatUpdated(note.updated_at).toUpperCase()}</span>
+            </button>
+          ))}
         </div>
       )}
+
+      <button className="fab" onClick={handleNew} aria-label="New note">
+        <Icon name="plus" size={30} strokeWidth={3.5} />
+      </button>
     </div>
   )
 }

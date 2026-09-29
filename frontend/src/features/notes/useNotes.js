@@ -1,64 +1,50 @@
 /**
- * useNotes: custom hook for managing notes state and API calls.
+ * useNotes: notes for the logged-in user, with search.
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { apiFetch } from '../../shared/api'
 
-function getUserId() {
-  let id = localStorage.getItem('user_id')
-  if (!id) {
-    id = 'user-' + Math.random().toString(36).substring(2, 10)
-    localStorage.setItem('user_id', id)
-  }
-  return id
-}
-
-const USER_ID = getUserId()
-
-export function useNotes() {
+export function useNotes(userId) {
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const fetchNotes = useCallback(async (search = '') => {
-    setLoading(true)
-    setError('')
     try {
-      const url = search ? `/notes?user_id=${USER_ID}&search=${encodeURIComponent(search)}` : `/notes?user_id=${USER_ID}`
-      const res = await apiFetch(url)
-      if (!res.ok) throw new Error('Failed to load notes')
+      const query = new URLSearchParams({ user_id: userId })
+      if (search) query.set('search', search)
+      const res = await apiFetch(`/notes?${query}`)
+      if (!res.ok) throw new Error('load failed')
       setNotes(await res.json())
+      setError('')
     } catch {
       setError('Could not load notes')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [userId])
 
-  const createNote = async () => {
+  async function createNote() {
     const res = await apiFetch('/notes', {
       method: 'POST',
-      body: JSON.stringify({ user_id: USER_ID, title: 'New Note', content: '' }),
+      body: JSON.stringify({ user_id: userId, title: 'New note', content: '' }),
     })
     if (!res.ok) throw new Error('Failed to create note')
-    const note = await res.json()
-    await fetchNotes()
-    return note
+    return await res.json()
   }
 
-  const updateNote = async (id, updates) => {
-    const res = await apiFetch(`/notes/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates),
-    })
+  // Auto-save calls this often, so it patches local state instead of refetching
+  async function updateNote(id, updates) {
+    const res = await apiFetch(`/notes/${id}`, { method: 'PUT', body: JSON.stringify(updates) })
     if (!res.ok) throw new Error('Failed to update note')
-    await fetchNotes()
+    const saved = await res.json()
+    setNotes(prev => prev.map(n => (n.id === id ? saved : n)))
   }
 
-  const deleteNote = async (id) => {
+  async function deleteNote(id) {
     const res = await apiFetch(`/notes/${id}`, { method: 'DELETE' })
     if (!res.ok) throw new Error('Failed to delete note')
-    await fetchNotes()
+    setNotes(prev => prev.filter(n => n.id !== id))
   }
 
   return { notes, loading, error, fetchNotes, createNote, updateNote, deleteNote }

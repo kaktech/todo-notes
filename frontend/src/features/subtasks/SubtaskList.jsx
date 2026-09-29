@@ -1,47 +1,37 @@
 /**
- * SubtaskList: checklist of subtasks for a task.
- * Shows "+ Add New Subtask" row, then the checklist below.
+ * SubtaskList: add box + checklist. The parent decides how to store subtasks
+ * (live API calls for saved tasks, local state for a brand-new task).
  */
 import { useState } from 'react'
 import SubtaskRow from './SubtaskRow'
 
-export default function SubtaskList({ subtasks, onAdd, onToggle, onDelete, onTitleChange }) {
+export default function SubtaskList({ subtasks, onAdd, onToggle, onDelete }) {
   const [newTitle, setNewTitle] = useState('')
 
-  // Handle adding a new subtask
-  async function handleAdd(e) {
-    e.preventDefault()
-    if (!newTitle.trim()) return
-    await onAdd(newTitle.trim())
+  async function handleAdd() {
+    const title = newTitle.trim()
+    if (!title) return
+    await onAdd(title)
     setNewTitle('')
   }
 
   return (
     <div className="subtask-list">
-      <div className="subtask-section-title">Subtasks:</div>
-
-      {/* Add new subtask row */}
-      <form onSubmit={handleAdd} className="subtask-add-row">
-        <span className="subtask-add-icon">+</span>
+      {subtasks.map(sub => (
+        <SubtaskRow key={sub.id} subtask={sub} onToggle={onToggle} onDelete={onDelete} />
+      ))}
+      {/* Not a <form>: this sits inside the task form and nested forms are invalid */}
+      <div className="subtask-add-row">
         <input
           type="text"
           value={newTitle}
           onChange={e => setNewTitle(e.target.value)}
-          placeholder="Add New Subtask"
-          className="subtask-add-input"
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
+          placeholder="Add a subtask"
+          className="field-input"
         />
-      </form>
-
-      {/* Subtask checklist */}
-      {subtasks.map(sub => (
-        <SubtaskRow
-          key={sub.id}
-          subtask={sub}
-          onToggle={onToggle}
-          onDelete={onDelete}
-          onTitleChange={onTitleChange}
-        />
-      ))}
+        <button type="button" className="btn btn-small" onClick={handleAdd}>Add</button>
+      </div>
     </div>
   )
 }

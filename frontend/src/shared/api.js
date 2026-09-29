@@ -1,25 +1,15 @@
 /**
- * API helper: returns the base URL for API calls.
- * In production (Vercel), uses VITE_API_URL env var.
- * In local dev, uses relative /api (proxied by Vite).
+ * API helper: builds the base URL for API calls.
+ * In production the frontend calls the backend at VITE_API_URL (or same origin).
+ * In local dev, relative /api is proxied by Vite.
  */
 export function getApiBase() {
-  // Vercel injects env vars at build time via vite.config.js define
   return import.meta.env.VITE_API_URL || ''
 }
 
-/**
- * Helper to make API calls with the correct base URL.
- */
 export async function apiFetch(path, options = {}) {
-  const base = getApiBase()
-  const url = `${base}/api${path}`
-  const res = await fetch(url, {
+  return fetch(`${getApiBase()}/api${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers: { 'Content-Type': 'application/json', ...options.headers },
   })
-  return res
 }

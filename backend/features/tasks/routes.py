@@ -76,6 +76,8 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
         category_id=task.category_id,
         alert_enabled=task.alert_enabled,
         recurrence=task.recurrence,
+        color=task.color,
+        icon=task.icon,
         position=max_pos + 1,
     )
     db.add(db_task)
@@ -147,6 +149,8 @@ def create_next_occurrence(task: Task, db: Session):
         category_id=task.category_id,
         alert_enabled=task.alert_enabled,
         recurrence=task.recurrence,
+        color=task.color,
+        icon=task.icon,
         position=task.position,
     )
 

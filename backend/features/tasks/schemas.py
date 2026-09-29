@@ -18,6 +18,8 @@ class TaskCreate(BaseModel):
     category_id: Optional[int] = None
     alert_enabled: bool = False
     recurrence: str = Field("none", pattern="^(none|daily|weekly|monthly)$")
+    color: Optional[str] = None
+    icon: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
@@ -32,6 +34,8 @@ class TaskUpdate(BaseModel):
     completed: Optional[bool] = None
     alert_enabled: Optional[bool] = None
     recurrence: Optional[str] = Field(None, pattern="^(none|daily|weekly|monthly)$")
+    color: Optional[str] = None
+    icon: Optional[str] = None
 
 
 class TaskResponse(BaseModel):
@@ -49,6 +53,8 @@ class TaskResponse(BaseModel):
     alert_enabled: bool
     recurrence: str
     position: int
+    color: Optional[str] = None
+    icon: Optional[str] = None
     created_at: datetime
 
     class Config:
