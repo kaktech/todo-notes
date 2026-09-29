@@ -1,6 +1,6 @@
 /**
- * TaskCard: compact task row showing only checkbox, title, and optional meta.
- * Description and priority are NOT shown here — they belong in the detail panel.
+ * TaskCard: compact task row with checkbox, title, description, and optional meta.
+ * Priority is NOT shown here — it belongs in the detail panel.
  */
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -43,9 +43,10 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete }) {
         aria-label={`Mark "${task.title}" as ${task.completed ? 'incomplete' : 'complete'}`}
       />
 
-      {/* Task content — title only, no description, no bare priority */}
+      {/* Task content — title + description (clean, separate lines) */}
       <div className="task-content">
         <span className="task-title">{task.title}</span>
+        {task.description && <span className="task-desc">{task.description}</span>}
         {dueBadge && <div className="task-meta">{dueBadge}</div>}
       </div>
 

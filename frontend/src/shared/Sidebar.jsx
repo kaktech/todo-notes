@@ -74,6 +74,15 @@ export default function Sidebar({
         </button>
 
         <button
+          className={`sidebar-item ${view === 'overdue' ? 'active' : ''}`}
+          onClick={() => onViewChange('overdue')}
+        >
+          <span className="sidebar-item-icon">&#9888;</span>
+          <span>Overdue</span>
+          <span className="count-badge">{taskCounts.overdue || 0}</span>
+        </button>
+
+        <button
           className={`sidebar-item ${view === 'today' ? 'active' : ''}`}
           onClick={() => onViewChange('today')}
         >

@@ -1,11 +1,10 @@
 /**
  * TaskDetailPanel: right panel for viewing/editing a task.
- * Shows title, description, list, due date, tags, and subtasks.
+ * Shows title, description, list, due date, and tags.
  * Opens when a task is clicked, or blank for a new task.
  */
 import { useState, useEffect } from 'react'
 import TagPicker from '../tags/TagPicker'
-import SubtaskList from '../subtasks/SubtaskList'
 
 export default function TaskDetailPanel({
   task,
@@ -239,14 +238,6 @@ export default function TaskDetailPanel({
           }}
         />
 
-        {/* Subtasks */}
-        <SubtaskList
-          subtasks={subtasks}
-          onAdd={handleAddSubtask}
-          onToggle={handleToggleSubtask}
-          onDelete={handleDeleteSubtask}
-          onTitleChange={handleUpdateSubtask}
-        />
       </div>
 
       {/* Bottom buttons */}

@@ -47,6 +47,14 @@ def get_tasks(
             Task.due_date.isnot(None),
             Task.due_date < today,
         )
+    elif filter == "upcoming":
+        # Only show incomplete tasks with a due date in the future (beyond today)
+        today = date_type.today().isoformat()
+        query = query.filter(
+            Task.completed == False,
+            Task.due_date.isnot(None),
+            Task.due_date > today,
+        )
 
     return query.order_by(Task.position).all()
 
