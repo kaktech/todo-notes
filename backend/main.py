@@ -26,6 +26,10 @@ from features.auth.routes import router as auth_router
 from database import Base, engine
 Base.metadata.create_all(bind=engine)
 
+# Create notes tables (separate database)
+from database_notes import NotesBase, notes_engine
+NotesBase.metadata.create_all(bind=notes_engine)
+
 app = FastAPI(title="TaskFlow API", version="1.0.0")
 
 # API routes — all under /api (routes already have their own /api/ prefix)

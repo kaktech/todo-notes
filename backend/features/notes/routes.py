@@ -1,14 +1,17 @@
 """
 Note API endpoints: create, read, update, delete.
-All endpoints filter by user_id so each user sees only their own notes.
+Uses the separate notes database.
 """
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from database import get_db
+from database_notes import get_notes_db, NotesBase, notes_engine
 from features.notes.models import Note
 from features.notes.schemas import NoteCreate, NoteUpdate, NoteResponse
+
+# Create notes tables
+NotesBase.metadata.create_all(bind=notes_engine)
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 
@@ -17,7 +20,7 @@ router = APIRouter(prefix="/api/notes", tags=["notes"])
 def get_notes(
     user_id: str = Query(..., description="Unique browser ID of the user"),
     search: Optional[str] = Query(None, description="Search notes by title or content"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_notes_db),
 ):
     """Get all notes for a specific user, optionally searched."""
     query = db.query(Note).filter(Note.user_id == user_id)
@@ -31,7 +34,7 @@ def get_notes(
 
 
 @router.post("", response_model=NoteResponse, status_code=201)
-def create_note(note: NoteCreate, db: Session = Depends(get_db)):
+def create_note(note: NoteCreate, db: Session = Depends(get_notes_db)):
     """Create a new note."""
     db_note = Note(user_id=note.user_id, title=note.title, content=note.content)
     db.add(db_note)
@@ -41,7 +44,7 @@ def create_note(note: NoteCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{note_id}", response_model=NoteResponse)
-def get_note(note_id: int, db: Session = Depends(get_db)):
+def get_note(note_id: int, db: Session = Depends(get_notes_db)):
     """Get a single note by ID."""
     db_note = db.query(Note).filter(Note.id == note_id).first()
     if not db_note:
@@ -50,7 +53,7 @@ def get_note(note_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{note_id}", response_model=NoteResponse)
-def update_note(note_id: int, note_update: NoteUpdate, db: Session = Depends(get_db)):
+def update_note(note_id: int, note_update: NoteUpdate, db: Session = Depends(get_notes_db)):
     """Update a note's title and/or content."""
     db_note = db.query(Note).filter(Note.id == note_id).first()
     if not db_note:
@@ -68,7 +71,7 @@ def update_note(note_id: int, note_update: NoteUpdate, db: Session = Depends(get
 
 
 @router.delete("/{note_id}", status_code=204)
-def delete_note(note_id: int, db: Session = Depends(get_db)):
+def delete_note(note_id: int, db: Session = Depends(get_notes_db)):
     """Delete a note by ID."""
     db_note = db.query(Note).filter(Note.id == note_id).first()
     if not db_note:

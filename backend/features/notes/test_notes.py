@@ -1,6 +1,6 @@
 """
 Tests for all note endpoints.
-Uses a temporary SQLite database so we never touch the real app.db.
+Uses a temporary SQLite database so we never touch the real notes.db.
 Run with: pytest features/notes/test_notes.py -v
 """
 import os
@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database import Base, get_db
+from database_notes import NotesBase, get_notes_db
 from main import app
 
 
@@ -23,16 +23,16 @@ def client():
     test_db_url = f"sqlite:///{db_path}"
     engine = create_engine(test_db_url, connect_args={"check_same_thread": False})
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine)
+    NotesBase.metadata.create_all(bind=engine)
 
-    def override_get_db():
+    def override_get_notes_db():
         db = TestingSessionLocal()
         try:
             yield db
         finally:
             db.close()
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_notes_db] = override_get_notes_db
 
     with TestClient(app) as c:
         yield c
