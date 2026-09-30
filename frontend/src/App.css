@@ -571,6 +571,7 @@ textarea.field { resize: vertical; }
 .color-dot { width: 26px; height: 26px; padding: 0; border: 2px solid rgba(255, 255, 255, 0.85); border-radius: 50%; box-shadow: 0 3px 8px rgba(20, 50, 130, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.45); }
 .color-dot.active { outline: 3px solid var(--ink); outline-offset: 3px; }
 .color-select { width: auto; flex: 0 0 auto; border-left-width: 8px; }
+.sample-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .danger-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; font-size: 17px; font-weight: 700; text-align: left; color: var(--danger); border-radius: 26px; }
 .danger-row:disabled { opacity: 0.55; cursor: not-allowed; }
 .danger-row-label { flex: 1; }

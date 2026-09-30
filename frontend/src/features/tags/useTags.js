@@ -41,5 +41,5 @@ export function useTags(userId) {
     await Promise.all([fetchTags(), fetchTaskTagMap()])
   }
 
-  return { tags, taskTagMap, fetchTaskTagMap, createTag, deleteTag }
+  return { tags, fetchTags, taskTagMap, fetchTaskTagMap, createTag, deleteTag }
 }

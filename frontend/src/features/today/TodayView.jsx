@@ -223,10 +223,11 @@ function Rail({ tasks, slipped, todayTasks, now, onMove, onEdit, onDelete, onCre
 
 export default function TodayView({
   tasks, loading, error, categories, tags, taskTagMap, now,
-  onToggle, onUpdate, onReorder, onDelete, onCompose, onEdit, onCreate, onOpenWeek,
+  onToggle, onUpdate, onReorder, onDelete, onCompose, onEdit, onCreate, onOpenWeek, onLoadSample,
 }) {
   const [query, setQuery] = useState('')
   const [reorderError, setReorderError] = useState('')
+  const [sampling, setSampling] = useState(false)
   const today = todayStr()
   const nowMin = minutesOfDay(now)
 
@@ -336,6 +337,13 @@ export default function TodayView({
                 text="Nothing planned today. Type a task above, or use the + in the dock."
                 actionLabel="Plan something"
                 onAction={() => onCompose({ date: today })}
+                secondaryLabel={tasks.length === 0 ? 'Load sample data' : undefined}
+                secondaryBusy={sampling}
+                onSecondary={async () => {
+                  setSampling(true)
+                  try { await onLoadSample() } catch { setReorderError('Couldn\'t load the sample data. Try again.') }
+                  setSampling(false)
+                }}
               />
             )
           )}

@@ -74,6 +74,7 @@ Translucent blurred panels floating over a soft blue gradient, bright top edges,
 - **Composer** (`features/composer`): one line to type — `parseQuickAdd` (`features/tasks/quickAdd.js`) understands "gym tomorrow 6pm for an hour" (dates like 5/10 are day/month). Tabs below: When · Look (tint + glyph) · Details (notes, list, priority, repeat) · Tags · Steps (subtasks). Centered card on desktop, bottom sheet on phones. New tasks default to today.
 - **Task tiles** (`features/tasks/PaneTile.jsx`) show ONLY: glyph, time line, bold title (struck through + muted when done), chips (High priority, list, #tags), Mark done, edit, delete. Never show the raw description on a tile — it lives in the composer's Details tab. Tags come from one call, `GET /api/tags/task-map`.
 - **Durations**: chips from 5m to 8h plus a custom-minutes box (max 23h59).
+- **Sample data**: Setup has "Load sample data" and "Back to empty" (`features/settings/sampleData.js`); the empty Today screen also offers Load sample data. It creates tasks (running now, later, anytime, done, overdue, this week, repeating), 3 lists, 3 tags, steps and 3 notes through the normal API, and "Back to empty" deletes all of them.
 - **Notes**: glass sticky-note tiles in columns; tap to open a full editor with auto-save. **Setup**: appearance, lists, tags, clear every task.
 - Dates are always local-time "YYYY-MM-DD" strings from `shared/dates.js` — never `toISOString()` (it shifts the day near midnight).
 
@@ -85,6 +86,7 @@ Translucent blurred panels floating over a soft blue gradient, bright top edges,
 - **Tag attach on new task**: Tag-attach code must never assume `task.id` exists. When creating a brand-new task, hold selected tags in local state and attach them via the API only after the task is saved and a real ID exists.
 - **Seed data**: Do not seed demo/default lists (e.g. "personal", "list 2") for new users — new accounts start with zero lists.
 - **Steps (subtasks) on a new task**: like tags, hold them in local state and create them via the API only after the task has a real id.
+- **Orphan rows on delete**: deleting a task must also delete its tag links and subtasks, and deleting a tag must remove its links (Postgres enforces the foreign keys; SQLite reuses ids, so leftovers attached themselves to the next task). Any new child table needs the same cleanup. Regression tests: `TestDeleteCleansUp` in `test_tasks.py`.
 - **Notes auto-save**: flush unsaved edits when leaving the editor, and never PUT an empty title (422).
 
 ---

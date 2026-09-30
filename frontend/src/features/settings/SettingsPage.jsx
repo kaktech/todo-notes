@@ -53,12 +53,13 @@ function ListRow({ category, onUpdate, onDelete }) {
   )
 }
 
-export default function SettingsPage({ taskCount, onDeleteAllTasks, listApi, tagApi }) {
+export default function SettingsPage({ taskCount, onDeleteAllTasks, listApi, tagApi, onLoadSample, onClearAll }) {
   const { mode, setMode } = useTheme()
   const [newList, setNewList] = useState('')
   const [newListColor, setNewListColor] = useState(TASK_COLORS[0].value)
   const [newTag, setNewTag] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState('')
 
   async function run(action) {
     try {
@@ -85,6 +86,13 @@ export default function SettingsPage({ taskCount, onDeleteAllTasks, listApi, tag
 
   function deleteList(category) {
     if (window.confirm(`Delete the list "${category.name}"?`)) run(() => listApi.deleteCategory(category.id))
+  }
+
+  async function sample(kind) {
+    if (kind === 'empty' && !window.confirm('Delete every task, list, tag and note and go back to empty?')) return
+    setBusy(kind)
+    await run(kind === 'fill' ? onLoadSample : onClearAll)
+    setBusy('')
   }
 
   function deleteAll() {
@@ -163,6 +171,21 @@ export default function SettingsPage({ taskCount, onDeleteAllTasks, listApi, tag
             <input className="field-input" value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="New tag name" aria-label="New tag name" />
             <button className="btn btn-small btn-primary" type="submit">Add</button>
           </form>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h2 className="eyebrow section">Sample data</h2>
+        <div className="settings-card">
+          <p className="soft">See the app full of tasks, lists, tags and notes, then switch back to empty whenever you like.</p>
+          <div className="sample-actions">
+            <button className="btn btn-primary" onClick={() => sample('fill')} disabled={!!busy}>
+              {busy === 'fill' ? 'Loading…' : 'Load sample data'}
+            </button>
+            <button className="btn" onClick={() => sample('empty')} disabled={!!busy}>
+              {busy === 'empty' ? 'Clearing…' : 'Back to empty'}
+            </button>
+          </div>
         </div>
       </section>
 

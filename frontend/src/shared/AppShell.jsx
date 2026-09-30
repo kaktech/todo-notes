@@ -15,6 +15,7 @@ import SettingsPage from '../features/settings/SettingsPage'
 import { useTasks } from '../features/tasks/useTasks'
 import { useCategories } from '../features/categories/useCategories'
 import { useTags } from '../features/tags/useTags'
+import { loadSampleData, clearEverything } from '../features/settings/sampleData'
 
 export default function AppShell() {
   const [userId] = useState(getUserId)
@@ -40,6 +41,17 @@ export default function AppShell() {
       return existing
     }
     return await taskApi.createTask(payload)
+  }
+
+  // Sample data: fill every screen in one click, or go back to empty
+  const refreshAll = () => Promise.all([taskApi.fetchTasks(), listApi.fetchCategories(), tagApi.fetchTags(), tagApi.fetchTaskTagMap()])
+  async function fillSample() {
+    await loadSampleData(userId)
+    await refreshAll()
+  }
+  async function emptyEverything() {
+    await clearEverything(userId)
+    await refreshAll()
   }
 
   const toggle = task => taskApi.updateTask(task.id, { completed: !task.completed })
@@ -70,6 +82,7 @@ export default function AppShell() {
             onCompose={openComposer}
             onEdit={editTask}
             onCreate={taskApi.createTask}
+            onLoadSample={fillSample}
             onOpenWeek={() => setView('week')}
           />
         )}
@@ -89,6 +102,8 @@ export default function AppShell() {
             onDeleteAllTasks={taskApi.deleteAllTasks}
             listApi={listApi}
             tagApi={tagApi}
+            onLoadSample={fillSample}
+            onClearAll={emptyEverything}
           />
         )}
       </main>

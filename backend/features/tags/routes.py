@@ -35,6 +35,8 @@ def delete_tag(tag_id: int, db: Session = Depends(get_db)):
     db_tag = db.query(Tag).filter(Tag.id == tag_id).first()
     if not db_tag:
         raise HTTPException(status_code=404, detail="Tag not found")
+    # Remove the tag from every task first (foreign key + reused ids)
+    db.execute(task_tags.delete().where(task_tags.c.tag_id == tag_id))
     db.delete(db_tag)
     db.commit()
 

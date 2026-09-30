@@ -98,10 +98,23 @@ def reorder_tasks(request: ReorderRequest, db: Session = Depends(get_db)):
     db.commit()
 
 
+def delete_task_children(task_ids: list[int], db: Session):
+    """Remove a task's tag links and subtasks first (Postgres enforces these foreign keys,
+    and SQLite reuses ids, so leftovers would attach to the next task with that id)."""
+    if not task_ids:
+        return
+    from features.tags.models import task_tags
+    from features.subtasks.models import Subtask
+    db.execute(task_tags.delete().where(task_tags.c.task_id.in_(task_ids)))
+    db.query(Subtask).filter(Subtask.task_id.in_(task_ids)).delete(synchronize_session=False)
+
+
 @router.delete("/completed", status_code=204)
 def clear_completed(user_id: str = Query(..., description="Unique browser ID of the user"), db: Session = Depends(get_db)):
     """Delete all completed tasks for a specific user."""
-    db.query(Task).filter(Task.user_id == user_id, Task.completed == True).delete()
+    done = db.query(Task).filter(Task.user_id == user_id, Task.completed == True)
+    delete_task_children([t.id for t in done.all()], db)
+    done.delete(synchronize_session=False)
     db.commit()
 
 
@@ -180,5 +193,6 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    delete_task_children([task_id], db)
     db.delete(db_task)
     db.commit()

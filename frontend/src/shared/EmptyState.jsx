@@ -11,7 +11,7 @@ export function IconBadge({ name = 'sparkle', size = 34 }) {
   )
 }
 
-export default function EmptyState({ icon = 'sparkle', title, text, actionLabel, onAction }) {
+export default function EmptyState({ icon = 'sparkle', title, text, actionLabel, onAction, secondaryLabel, onSecondary, secondaryBusy }) {
   return (
     <div className="empty">
       <IconBadge name={icon} />
@@ -20,6 +20,11 @@ export default function EmptyState({ icon = 'sparkle', title, text, actionLabel,
       {actionLabel && (
         <button className="btn btn-primary btn-pill" onClick={onAction}>
           {actionLabel}
+        </button>
+      )}
+      {secondaryLabel && (
+        <button className="btn btn-pill" onClick={onSecondary} disabled={secondaryBusy}>
+          {secondaryBusy ? 'Loading sample data…' : secondaryLabel}
         </button>
       )}
     </div>

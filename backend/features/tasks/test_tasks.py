@@ -320,3 +320,43 @@ def test_add_missing_columns_upgrades_old_database(tmp_path):
     add_missing_columns(old)  # running twice must be harmless
     names = {c["name"] for c in inspect(old).get_columns("tasks")}
     assert {"color", "icon"} <= names
+
+
+class TestDeleteCleansUp:
+    """Deleting must remove tag links and subtasks (Postgres foreign keys, and SQLite id reuse)."""
+
+    def _task_with_tag_and_step(self, client):
+        task = make_task(client, title="Has extras").json()
+        tag = client.post("/api/tags", json={"user_id": USER_A, "name": "t"}).json()
+        client.post(f"/api/tags/tasks/{task['id']}/tags/{tag['id']}")
+        client.post(f"/api/tasks/{task['id']}/subtasks", json={"title": "step"})
+        return task, tag
+
+    def test_delete_task_removes_its_tags_and_subtasks(self, client):
+        task, tag = self._task_with_tag_and_step(client)
+        assert client.delete(f"/api/tasks/{task['id']}").status_code == 204
+        assert client.get(f"/api/tags/tasks/{task['id']}").json() == []
+        assert client.get(f"/api/tasks/{task['id']}/subtasks").json() == []
+        assert client.get(f"/api/tags/task-map?user_id={USER_A}").json() == {}
+
+    def test_new_task_does_not_inherit_a_deleted_tasks_tag(self, client):
+        task, tag = self._task_with_tag_and_step(client)
+        client.delete(f"/api/tasks/{task['id']}")
+        client.delete(f"/api/tags/{tag['id']}")
+        # ids may be reused; a fresh task and tag must start clean and attach without a clash
+        new_task = make_task(client, title="Fresh").json()
+        new_tag = client.post("/api/tags", json={"user_id": USER_A, "name": "new"}).json()
+        assert client.get(f"/api/tags/tasks/{new_task['id']}").json() == []
+        assert client.post(f"/api/tags/tasks/{new_task['id']}/tags/{new_tag['id']}").status_code == 204
+
+    def test_delete_tag_removes_it_from_tasks(self, client):
+        task, tag = self._task_with_tag_and_step(client)
+        assert client.delete(f"/api/tags/{tag['id']}").status_code == 204
+        assert client.get(f"/api/tags/tasks/{task['id']}").json() == []
+
+    def test_clear_completed_removes_children_too(self, client):
+        task, tag = self._task_with_tag_and_step(client)
+        client.put(f"/api/tasks/{task['id']}", json={"completed": True})
+        assert client.delete(f"/api/tasks/completed?user_id={USER_A}").status_code == 204
+        assert client.get(f"/api/tasks/{task['id']}/subtasks").json() == []
+        assert client.get(f"/api/tags/task-map?user_id={USER_A}").json() == {}

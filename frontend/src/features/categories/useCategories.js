@@ -37,5 +37,5 @@ export function useCategories(userId) {
     await fetchCategories()
   }
 
-  return { categories, addCategory, updateCategory, deleteCategory }
+  return { categories, fetchCategories, addCategory, updateCategory, deleteCategory }
 }
